@@ -110,6 +110,11 @@ static esp_err_t app_uart_write_handle(uint8_t *src_addr, void *data,
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
     ESP_LOGI(TAG, "Send callback called, status: %d", status);
+    if (status == ESP_NOW_SEND_SUCCESS) {
+        ESP_LOGI(TAG, "Data sent successfully");
+    } else {
+        ESP_LOGE(TAG, "Failed to send data, status: %d", status);
+    }
     
 }
 
@@ -145,12 +150,22 @@ void app_main()
     ESP_ERROR_CHECK( esp_now_init());
 
 
-    // Add peer own MAC address as peer to enable ESP-NOW communication
+    // Add peer
+    uint8_t primary;
+    wifi_second_chan_t second;
+    esp_wifi_get_channel(&primary, &second);
     esp_now_peer_info_t peer = {0};
     memcpy(peer.peer_addr, peer_mac, 6);
-    peer.channel = 0;
+    peer.channel = primary;
     peer.encrypt = false;
-    esp_now_add_peer(&peer);
+    peer.ifidx = WIFI_IF_STA;
+    esp_err_t res = esp_now_add_peer(&peer);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to add peer: %s", esp_err_to_name(res));
+        return;
+    }
+    ESP_LOGI(TAG, "Peer added successfully: [" MACSTR "]", MAC2STR(peer_mac));
+    ESP_LOGI(TAG, "Peer information: channel=%d, encrypt=%d, ifidx=%d", peer.channel, peer.encrypt, peer.ifidx);
     ESP_LOGI(TAG, "ESP-NOW initialized successfully");
 
 
@@ -163,8 +178,13 @@ void app_main()
 
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
-            esp_now_send(peer_mac, (const uint8_t *)data, sizeof(data) + 1);
-            ESP_LOGI(TAG, "Sent data: %s", data);
+            ESP_LOGI (TAG, "Sending data: %s", data);
+            esp_err_t res = esp_now_send(peer_mac, (uint8_t *)data, strlen((char *)data));;
+            if (res != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to send data");
+            }
+
+            ESP_LOGI(TAG, "Response: %s", esp_err_to_name(res));
 
         } else {
             ESP_LOGI(TAG, "Device is in receiver mode");

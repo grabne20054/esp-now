@@ -162,7 +162,6 @@ void app_main()
     peer.encrypt = false;
     peer.ifidx = WIFI_IF_STA;
 
-
     esp_err_t res = esp_now_add_peer(&peer);
 
     if (res != ESP_OK) {
@@ -174,6 +173,22 @@ void app_main()
     ESP_LOGI(TAG, "ESP-NOW initialized successfully");
 
 
+    // set rate config long range optimised
+
+    esp_wifi_set_protocol(WIFI_IF_STA,
+    WIFI_PROTOCOL_11B |
+    WIFI_PROTOCOL_LR);
+
+
+    esp_now_rate_config_t rate = {0};
+    rate.phymode = WIFI_PHY_MODE_LR;
+    rate.rate = WIFI_PHY_RATE_LORA_500K;
+    rate.dcm = true;
+    rate.ersu = true;
+
+    ESP_ERROR_CHECK( esp_now_set_peer_rate_config(peer_mac, &rate) );
+
+
     esp_now_register_send_cb(app_send_cb_handle);
     esp_now_register_recv_cb(app_recv_cb_handle);
 
@@ -181,7 +196,7 @@ void app_main()
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        e_actions_t action = OPEN;
+        e_actions_t action = 1;
         time_t rawtime;
 
         data_stream_t data = {0};
@@ -194,10 +209,7 @@ void app_main()
 
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
-            ESP_LOGI (TAG, "Sending data: %s", data);
-            esp_err_t res = esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data));
-
-            ESP_LOGI(TAG, "Response: %s", esp_err_to_name(res));
+            ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data)));
 
         } else {
             ESP_LOGI(TAG, "Device is in receiver mode");

@@ -33,7 +33,7 @@
 
 #define SWITCH        0
 
-#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x65}  // placeholder
+#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x64}  // placeholder
 
 static const char *TAG = "app_main";
 
@@ -112,15 +112,13 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
     if (!tx_info) return;
     ESP_LOGI(TAG, "Send callback called, dest=" MACSTR ", src=" MACSTR ", status=%s",
              MAC2STR(tx_info->des_addr), MAC2STR(tx_info->src_addr), esp_err_to_name(status));
-
-
 }
 
 void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data, int size)
 {
     if (!rx_info || !data || size <= 0) return;
-    ESP_LOGI(TAG, "Receive callback called, src=" MACSTR ", size=%d",
-             MAC2STR(rx_info->src_addr), size);
+    ESP_LOGI(TAG, "Receive callback called, src=" MACSTR ", size=%d, data: %.*s",
+             MAC2STR(rx_info->src_addr), size, (char *)data);
 }
 
 void app_main()

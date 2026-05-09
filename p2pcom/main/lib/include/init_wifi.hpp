@@ -15,7 +15,7 @@ esp_err_t init();
 
 esp_err_t deinit();
 
-esp_err_t set_mode(wifi_mode_t mode);
+esp_err_t set_mode();
 
 esp_err_t get_mac(uint8_t mac[6]);
 

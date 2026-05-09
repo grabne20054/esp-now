@@ -174,7 +174,6 @@ void app_main()
 
 
     // set rate config long range optimised
-
     esp_wifi_set_protocol(WIFI_IF_STA,
     WIFI_PROTOCOL_11B |
     WIFI_PROTOCOL_LR);
@@ -182,7 +181,7 @@ void app_main()
 
     esp_now_rate_config_t rate = {0};
     rate.phymode = WIFI_PHY_MODE_LR;
-    rate.rate = WIFI_PHY_RATE_LORA_500K;
+    rate.rate = WIFI_PHY_RATE_LORA_250K; // or 500K
     rate.dcm = true;
     rate.ersu = true;
 

@@ -12,7 +12,6 @@
 
 #include "esp_log.h"
 #include "esp_system.h"
-#include "esp_wifi.h"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0)
 #include "esp_mac.h"
@@ -24,11 +23,17 @@
 
 #include "driver/uart.h"
 
+#include "lib/src/init_wifi.cpp"
+
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
 #define UART_PORT_NUM  0
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
+
+#define SWITCH        0
+
+#define PEER_MAC_ADDR {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}  // placeholder
 
 static const char *TAG = "app_main";
 
@@ -85,18 +90,6 @@ static void app_uart_initialize()
     xTaskCreate(app_uart_read_task, "app_uart_read_task", 4 * 1024, NULL, tskIDLE_PRIORITY + 1, NULL);
 }
 
-static void app_wifi_init()
-{
-    esp_event_loop_create_default();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-    ESP_ERROR_CHECK(esp_wifi_start());
-}
 
 static esp_err_t app_uart_write_handle(uint8_t *src_addr, void *data,
                                        size_t size, wifi_pkt_rx_ctrl_t *rx_ctrl)
@@ -114,15 +107,60 @@ static esp_err_t app_uart_write_handle(uint8_t *src_addr, void *data,
     return ESP_OK;
 }
 
+void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
+{
+    ESP_LOGI(TAG, "Send callback called, status: %d", status);
+    
+}
+
+void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data, int size)
+{
+    ESP_LOGI(TAG, "Receive callback called, size: %d", size);
+    
+}
+
 void app_main()
 {
+    const uint8_t peer_mac[6] = PEER_MAC_ADDR;
+    const uint8_t *data = (const uint8_t *)"Hello ESP-NOW!";
     espnow_storage_init();
 
     app_uart_initialize();
-    app_wifi_init();
 
-    espnow_config_t espnow_config = ESPNOW_INIT_CONFIG_DEFAULT();
-    espnow_init(&espnow_config);
+    // wifi initialize section
+    init();
+    set_mode(ESPNOW_WIFI_MODE);
 
-    espnow_set_config_for_data_type(ESPNOW_DATA_TYPE_DATA, true, app_uart_write_handle);
+    uint8_t mac[6];
+    esp_wifi_get_mac(ESPNOW_WIFI_IF, mac);
+    ESP_LOGI(TAG, "WiFi MAC address: [" MACSTR "]", MAC2STR(mac));
+
+    esp_now_init();
+
+
+    // Add peer own MAC address as peer to enable ESP-NOW communication
+    esp_now_peer_info_t peer = {0};
+    memcpy(peer.peer_addr, peer_mac, 6);
+    peer.channel = 0;
+    peer.encrypt = false;
+    esp_now_add_peer(&peer);
+    ESP_LOGI(TAG, "ESP-NOW initialized successfully");
+
+
+    esp_now_register_send_cb(app_send_cb_handle);
+    esp_now_register_recv_cb(app_recv_cb_handle);
+
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        if (SWITCH == 0) {
+            ESP_LOGI(TAG, "Device is in sender mode");
+            esp_now_send(peer_mac, data, sizeof(data));
+
+        } else {
+            ESP_LOGI(TAG, "Device is in receiver mode");
+        }
+    }
+
 }

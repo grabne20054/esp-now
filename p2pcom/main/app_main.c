@@ -115,8 +115,9 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
 
 void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data, int size)
 {
-    ESP_LOGI(TAG, "Receive callback called, size: %d", size);
-    
+    if (!rx_info || !data || size <= 0) return;
+    ESP_LOGI(TAG, "Receive callback called, src=" MACSTR ", size=%d",
+             MAC2STR(rx_info->src_addr), size);
 }
 
 void app_main()
@@ -128,14 +129,20 @@ void app_main()
     app_uart_initialize();
 
     // wifi initialize section
-    init();
-    set_mode();
+    if (init() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize WiFi");
+        return;
+    }
+    if (set_mode() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set WiFi mode");
+        return;
+    }
 
     uint8_t mac[6];
     esp_wifi_get_mac(ESPNOW_WIFI_IF, mac);
     ESP_LOGI(TAG, "WiFi MAC address: [" MACSTR "]", MAC2STR(mac));
 
-    esp_now_init();
+    ESP_ERROR_CHECK( esp_now_init());
 
 
     // Add peer own MAC address as peer to enable ESP-NOW communication
@@ -156,7 +163,7 @@ void app_main()
 
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
-            esp_now_send(peer_mac, data, sizeof(data));
+            esp_now_send(peer_mac, (const uint8_t *)data, sizeof(data) + 1);
             ESP_LOGI(TAG, "Sent data: %s", data);
 
         } else {

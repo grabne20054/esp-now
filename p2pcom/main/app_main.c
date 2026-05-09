@@ -170,12 +170,15 @@ void app_main()
     ESP_LOGI(TAG, "ESP-NOW initialized successfully");
 
 
+    esp_now_register_send_cb(app_send_cb_handle);
+    esp_now_register_recv_cb(app_recv_cb_handle);
+
+
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
-            esp_now_register_send_cb(app_send_cb_handle);
             ESP_LOGI (TAG, "Sending data: %s", data);
             esp_err_t res = esp_now_send(peer_mac, (uint8_t *)data, strlen((char *)data));
 
@@ -183,8 +186,6 @@ void app_main()
 
         } else {
             ESP_LOGI(TAG, "Device is in receiver mode");
-
-            esp_now_register_recv_cb(app_recv_cb_handle);
         }
     }
 

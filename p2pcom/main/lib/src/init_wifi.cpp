@@ -30,10 +30,10 @@ esp_err_t deinit()
     return ESP_OK;
 }
 
-esp_err_t set_mode(wifi_mode_t mode)
+esp_err_t set_mode()
 {
-    ESP_LOGI(TAG_WIFI, "Setting WiFi mode to %d", mode);
-    return esp_wifi_set_mode(mode);
+    ESP_LOGI(TAG_WIFI, "Setting WiFi mode to %d", WIFI_MODE_STA);
+    return esp_wifi_set_mode(WIFI_MODE_STA);
 }
 
 esp_err_t get_mac(uint8_t mac[6])

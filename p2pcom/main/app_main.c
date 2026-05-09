@@ -33,7 +33,7 @@
 
 #define SWITCH        0
 
-#define PEER_MAC_ADDR {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}  // placeholder
+#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x65}  // placeholder
 
 static const char *TAG = "app_main";
 
@@ -129,7 +129,7 @@ void app_main()
 
     // wifi initialize section
     init();
-    set_mode(ESPNOW_WIFI_MODE);
+    set_mode();
 
     uint8_t mac[6];
     esp_wifi_get_mac(ESPNOW_WIFI_IF, mac);
@@ -157,6 +157,7 @@ void app_main()
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
             esp_now_send(peer_mac, data, sizeof(data));
+            ESP_LOGI(TAG, "Sent data: %s", data);
 
         } else {
             ESP_LOGI(TAG, "Device is in receiver mode");

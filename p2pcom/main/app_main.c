@@ -109,13 +109,11 @@ static esp_err_t app_uart_write_handle(uint8_t *src_addr, void *data,
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
-    ESP_LOGI(TAG, "Send callback called, status: %d", status);
-    if (status == ESP_NOW_SEND_SUCCESS) {
-        ESP_LOGI(TAG, "Data sent successfully");
-    } else {
-        ESP_LOGE(TAG, "Failed to send data, status: %d", status);
-    }
-    
+    if (!tx_info) return;
+    ESP_LOGI(TAG, "Send callback called, dest=" MACSTR ", src=" MACSTR ", status=%s",
+             MAC2STR(tx_info->des_addr), MAC2STR(tx_info->src_addr), esp_err_to_name(status));
+
+
 }
 
 void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data, int size)
@@ -129,8 +127,8 @@ void app_main()
 {
     const uint8_t peer_mac[6] = PEER_MAC_ADDR;
     const uint8_t *data = (const uint8_t *)"Hello ESP-NOW!";
-    espnow_storage_init();
 
+    espnow_storage_init();
     app_uart_initialize();
 
     // wifi initialize section
@@ -154,12 +152,17 @@ void app_main()
     uint8_t primary;
     wifi_second_chan_t second;
     esp_wifi_get_channel(&primary, &second);
+
+
     esp_now_peer_info_t peer = {0};
     memcpy(peer.peer_addr, peer_mac, 6);
     peer.channel = primary;
     peer.encrypt = false;
     peer.ifidx = WIFI_IF_STA;
+
+
     esp_err_t res = esp_now_add_peer(&peer);
+
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to add peer: %s", esp_err_to_name(res));
         return;
@@ -169,25 +172,21 @@ void app_main()
     ESP_LOGI(TAG, "ESP-NOW initialized successfully");
 
 
-    esp_now_register_send_cb(app_send_cb_handle);
-    esp_now_register_recv_cb(app_recv_cb_handle);
-
-
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
+            esp_now_register_send_cb(app_send_cb_handle);
             ESP_LOGI (TAG, "Sending data: %s", data);
-            esp_err_t res = esp_now_send(peer_mac, (uint8_t *)data, strlen((char *)data));;
-            if (res != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to send data");
-            }
+            esp_err_t res = esp_now_send(peer_mac, (uint8_t *)data, strlen((char *)data));
 
             ESP_LOGI(TAG, "Response: %s", esp_err_to_name(res));
 
         } else {
             ESP_LOGI(TAG, "Device is in receiver mode");
+
+            esp_now_register_recv_cb(app_recv_cb_handle);
         }
     }
 

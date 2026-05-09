@@ -25,6 +25,8 @@
 
 #include "lib/src/init_wifi.cpp"
 
+#include "lib/src/engine.c"
+
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
 #define UART_PORT_NUM  0
@@ -119,12 +121,14 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     if (!rx_info || !data || size <= 0) return;
     ESP_LOGI(TAG, "Receive callback called, src=" MACSTR ", size=%d, data: %.*s",
              MAC2STR(rx_info->src_addr), size, (char *)data);
+
+    auto payload = (data_stream_t*) (data);
+    printf("command: %d", payload->command);
 }
 
 void app_main()
 {
-    const uint8_t peer_mac[6] = PEER_MAC_ADDR;
-    const uint8_t *data = (const uint8_t *)"Hello ESP-NOW!";
+    uint8_t peer_mac[6] = PEER_MAC_ADDR;
 
     espnow_storage_init();
     app_uart_initialize();
@@ -173,11 +177,22 @@ void app_main()
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
+        e_actions_t action = OPEN;
+        time_t rawtime;
+
+        data_stream_t data = {0};
+        data.command = action;
+        memcpy(data.dest, peer_mac, 6);
+        data.sent = time(&rawtime);
+        data.ttl = 1212;
+        data.crc = "c";
+
+
         if (SWITCH == 0) {
             ESP_LOGI(TAG, "Device is in sender mode");
             esp_now_register_send_cb(app_send_cb_handle);
             ESP_LOGI (TAG, "Sending data: %s", data);
-            esp_err_t res = esp_now_send(peer_mac, (uint8_t *)data, strlen((char *)data));
+            esp_err_t res = esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data));
 
             ESP_LOGI(TAG, "Response: %s", esp_err_to_name(res));
 

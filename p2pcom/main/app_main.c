@@ -206,13 +206,8 @@ void app_main()
         data.crc = "c";
 
 
-        if (SWITCH == 0) {
-            ESP_LOGI(TAG, "Device is in sender mode");
-            ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data)));
-
-        } else {
-            ESP_LOGI(TAG, "Device is in receiver mode");
-        }
+        ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data)));
+        
     }
 
 }

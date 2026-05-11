@@ -24,12 +24,12 @@ typedef struct engine{
 
 } engine_t;
 
-typedef struct data_stream
+typedef struct __attribute__((packed)) // necessary for crc
 {
     e_actions_t command;
     uint8_t dest[6];
     time_t sent;
     uint32_t ttl;
-    char *crc;
+    uint32_t crc;
 
 }data_stream_t;

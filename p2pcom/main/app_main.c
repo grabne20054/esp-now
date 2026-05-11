@@ -27,6 +27,8 @@
 
 #include "lib/src/engine.c"
 
+#include "lib/src/helpers.c"
+
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
 #define UART_PORT_NUM  0
@@ -123,7 +125,24 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
              MAC2STR(rx_info->src_addr), size, (char *)data);
 
     auto payload = (data_stream_t*) (data);
-    printf("command: %d", payload->command);
+
+    uint32_t response_crc = payload->crc;
+
+    payload->crc = 0;
+
+    printf("Res CRC: %ld", response_crc);
+    printf("Calc CRC: %ld", crc32(payload, sizeof(data_stream_t)));
+
+    if (response_crc == crc32(payload, sizeof(data_stream_t)))
+    {
+        ESP_LOGI(TAG, "Success CRC are correct");
+    }
+    else {
+        ESP_LOGE(TAG, "Error CRC");
+    }
+    
+
+
 }
 
 void app_main()
@@ -203,7 +222,11 @@ void app_main()
         memcpy(data.dest, peer_mac, 6);
         data.sent = time(&rawtime);
         data.ttl = 1212;
-        data.crc = "c";
+
+        memset(&data, 0, sizeof(data));
+
+        uint32_t crc = crc32(&data, sizeof(data));
+        data.crc = crc;
 
 
         ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data)));

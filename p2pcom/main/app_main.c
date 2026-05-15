@@ -29,13 +29,16 @@
 
 #include "lib/src/helpers.c"
 
+#include "lib/src/websocket.c"
+
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
 #define UART_PORT_NUM  0
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SWITCH        0
+#define SSID "samplessid"
+#define PASS "samplepass"
 
 #define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x64}  // placeholder
 
@@ -166,9 +169,19 @@ void app_main()
     esp_wifi_get_mac(ESPNOW_WIFI_IF, mac);
     ESP_LOGI(TAG, "WiFi MAC address: [" MACSTR "]", MAC2STR(mac));
 
+    wifi_config_t cfg = {
+        .sta = {
+            .ssid = SSID,
+            .password = PASS,
+
+        }
+    };
+ 
+    // TCP IP Stack setup
+    set_up_tcpip_stack(cfg);
+
+    
     ESP_ERROR_CHECK( esp_now_init());
-
-
     // Add peer
     uint8_t primary;
     wifi_second_chan_t second;
@@ -209,6 +222,8 @@ void app_main()
 
     esp_now_register_send_cb(app_send_cb_handle);
     esp_now_register_recv_cb(app_recv_cb_handle);
+
+    httpd_handle_t server = start_websocket();
 
 
     while (1) {

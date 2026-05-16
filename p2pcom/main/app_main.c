@@ -124,19 +124,18 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
 void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data, int size)
 {
     if (!rx_info || !data || size <= 0) return;
-    ESP_LOGI(TAG, "Receive callback called, src=" MACSTR ", size=%d, data: %.*s",
-             MAC2STR(rx_info->src_addr), size, (char *)data);
+    ESP_LOGI(TAG, "Receive callback called, src=" MACSTR ", size=%d", MAC2STR(rx_info->src_addr), size);
 
-    auto payload = (data_stream_t*) (data);
+    auto payload = (data_stream_t *) (data);
 
-    uint32_t response_crc = payload->crc;
+    data_stream_t *data_payload = calloc(1, sizeof(*payload));
+    memcpy(data_payload, payload, sizeof(*data_payload));
 
-    payload->crc = 0;
+    uint32_t response_crc = data_payload->crc;
 
-    printf("Res CRC: %ld", response_crc);
-    printf("Calc CRC: %ld", crc32(payload, sizeof(data_stream_t)));
+    data_payload->crc = 0;
 
-    if (response_crc == crc32(payload, sizeof(data_stream_t)))
+    if (response_crc == crc32(data_payload, sizeof(*data_payload)))
     {
         ESP_LOGI(TAG, "Success CRC are correct");
     }
@@ -144,7 +143,6 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
         ESP_LOGE(TAG, "Error CRC");
     }
     
-
 
 }
 
@@ -223,28 +221,29 @@ void app_main()
     esp_now_register_send_cb(app_send_cb_handle);
     esp_now_register_recv_cb(app_recv_cb_handle);
 
-    httpd_handle_t server = start_websocket();
+    //httpd_handle_t server = start_websocket();
 
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        e_actions_t action = 1;
+        e_actions_t action = 2;
         time_t rawtime;
 
-        data_stream_t data = {0};
-        data.command = action;
-        memcpy(data.dest, peer_mac, 6);
-        data.sent = time(&rawtime);
-        data.ttl = 1212;
+        data_stream_t *data = malloc(sizeof(data_stream_t));
+        data->command = action;
+        memcpy(data->dest, peer_mac, 6);
+        data->sent = time(&rawtime);
+        data->ttl = 1212;
 
-        memset(&data, 0, sizeof(data));
+        data->crc = 0;
 
-        uint32_t crc = crc32(&data, sizeof(data));
-        data.crc = crc;
+        uint32_t crc = crc32(data, sizeof(*data));
+        data->crc = crc;
 
+        ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)data , sizeof(*data)));
 
-        ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)&data , sizeof(data)));
+        free(data);
         
     }
 

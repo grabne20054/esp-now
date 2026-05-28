@@ -18,11 +18,11 @@
 #include "esp_log.h"
 #include "esp_system.h"
 
-esp_err_t init();
+esp_err_t init(void);
 
-esp_err_t deinit();
+esp_err_t deinit(void);
 
-esp_err_t set_mode();
+esp_err_t set_mode(void);
 
 esp_err_t get_mac(uint8_t mac[6]);
 

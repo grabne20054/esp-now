@@ -1,9 +1,9 @@
 #ifndef INIT_WIFI_CPP
 #define INIT_WIFI_CPP
 
-#define EXAMPLE_ESP_MAXIMUM_RETRY  100
+#define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
-#include "../include/init_wifi.hpp"
+#include "../include/init_wifi.h"
 
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
@@ -64,6 +64,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             ESP_LOGI(TAG_WIFI, "retry to connect to the AP");
         } else {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            ESP_LOGI(TAG_WIFI,"assuming node is in field side continue" );
         }
         ESP_LOGI(TAG_WIFI,"connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {

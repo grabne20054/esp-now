@@ -1,6 +1,9 @@
+#ifndef DATA_H
+#define DATA_H
+
 #include <stdint.h>
 #include <time.h>
-
+#include <pthread.h>
 
 typedef enum engine_status{
     READY=0,
@@ -17,10 +20,11 @@ typedef enum engine_actions{
 
 }e_actions_t;
 
-
 typedef struct engine{
     uint16_t position;
     e_status_t status;
+
+    pthread_mutex_t * mutex;
 
 } engine_t;
 
@@ -32,4 +36,21 @@ typedef struct __attribute__((packed)) // necessary for crc
     uint32_t ttl;
     uint32_t crc;
 
-}data_stream_t;
+    engine_t * engine;
+
+} data_stream_t;
+
+/*
+should only be initialized once per node (static)
+*/
+typedef struct queue {
+
+    size_t front, rear, max_size, current_size;
+    void * data_stream;
+
+    pthread_mutex_t * mutex;
+
+
+} queue_t;
+
+#endif

@@ -22,5 +22,7 @@ void destroy(queue_t * instance);
 
 queue_t * get_unq_queue();
 
+bool test_queue();
+
 
 #endif

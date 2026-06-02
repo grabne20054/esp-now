@@ -2,6 +2,7 @@
 #define QUEUE_C
 
 #include "../include/queue.h"
+#include <stdio.h>
 
 queue_t * create(int max_size)
 {
@@ -68,6 +69,43 @@ queue_t * get_unq_queue(){
         queue_instance = create(MAX_QUEUE_SIZE);
     }
     return queue_instance;
+}
+
+// test if queue is global the same
+bool test_queue()
+{
+
+    queue_t * queue = get_unq_queue();
+
+    e_actions_t action = 2;
+    data_stream_t *data = malloc(sizeof(data_stream_t));
+    data->command = action;
+    data->ttl = 1212;
+
+    data->crc = 0;
+
+    enqueue(queue, data);
+
+    printf("is empty %d\n", is_empty(queue));   
+
+    queue_t * queue1 = get_unq_queue();
+
+    printf("%p\n", &queue1);
+
+    printf("is empty %d\n", is_empty(queue1));
+
+    void * stream = dequeue(queue1);
+
+    auto payload = (data_stream_t *) (stream);
+
+    printf("ttl: %ld", payload->ttl);
+
+    if (queue==queue1)
+    {
+        return true;
+    }
+
+    return false;
 }
 
 #endif

@@ -47,8 +47,11 @@
 
 #define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x4a, 0x6c}  // placeholder
 
-
 static const char *TAG = "app_main";
+
+// global var for communication
+volatile uint32_t global_seq;
+volatile bool waiting_for_recv;
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
@@ -160,7 +163,7 @@ void app_main()
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        e_actions_t action = 2;
+        /*e_actions_t action = 2;
         time_t rawtime;
 
         data_stream_t *data = malloc(sizeof(data_stream_t));
@@ -176,7 +179,9 @@ void app_main()
 
         ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)data , sizeof(*data)));
 
-        free(data);
+        free(data);*/
+
+        ESP_LOGI( TAG, "test queue: %d", test_queue());
         
     }
 

@@ -56,17 +56,26 @@ static esp_err_t echo_handler(httpd_req_t *req)
         break;
     }
 
-    while (!pthread_mutex_lock(unq_queue->mutex))
+    bool add_succ = add_to_queue(action, unq_queue);
+
+    if (add_succ)
     {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        while (!pthread_mutex_trylock(unq_queue->mutex))
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+
+        pthread_mutex_lock(unq_queue->mutex);
+
+        esp_err_t err = transmit((data_stream_t *) unq_queue->data_stream);
+    
+    }
+    else
+    {
+        return 0;
     }
 
-    if (add_to_queue(action, unq_queue))
-    {
-        data_stream_t * stream = dequeue(unq_queue);
 
-        bool res = transmit(stream);
-    }
 
     pthread_mutex_unlock(unq_queue->mutex);
 

@@ -30,6 +30,7 @@ typedef struct engine{
 
 typedef struct __attribute__((packed)) // necessary for crc
 {
+    uint32_t seq;
     e_actions_t command;
     uint8_t dest[6];
     time_t sent;

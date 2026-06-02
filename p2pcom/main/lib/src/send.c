@@ -35,7 +35,7 @@ bool add_to_queue(e_actions_t action, queue_t *unq_queue)
 
 esp_err_t transmit(data_stream_t * stream)
 {
-    esp_now_send(stream->dest, (uint8_t*)stream, sizeof(*stream));
+    ESP_ERROR_CHECK( esp_now_send(stream->dest, (uint8_t*)stream, sizeof(*stream)));
 
     return ESP_OK;
 }

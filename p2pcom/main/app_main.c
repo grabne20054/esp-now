@@ -23,13 +23,16 @@
 
 #include "driver/uart.h"
 
-#include "lib/src/init_wifi.cpp"
+#include "lib/include/init_wifi.h"
 
-#include "lib/src/engine.c"
+#include "lib/include/engine.h"
 
 #include "lib/src/helpers.c"
 
-#include "lib/src/websocket.c"
+#include "lib/include/websocket.h"
+
+#include "lib/include/queue.h"
+
 
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
@@ -37,82 +40,15 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "samplessid"
-#define PASS "samplepass"
+#define SSID "TP-Link_AA48"
+#define PASS "17298865"
 
-#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x64}  // placeholder
+#define SWITCH 0 // 0=ws side   1=field side
+
+#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x4a, 0x6c}  // placeholder
+
 
 static const char *TAG = "app_main";
-
-static void app_uart_read_task(void *arg)
-{
-    esp_err_t ret  = ESP_OK;
-    uint32_t count = 0;
-    size_t size    = 0;
-    uint8_t *data  = ESP_CALLOC(1, ESPNOW_DATA_LEN);
-
-    ESP_LOGI(TAG, "Uart read handle task is running");
-
-    espnow_frame_head_t frame_head = {
-        .retransmit_count = CONFIG_RETRY_NUM,
-        .broadcast        = true,
-    };
-
-    for (;;) {
-        size = uart_read_bytes(UART_PORT_NUM, data, ESPNOW_DATA_LEN, pdMS_TO_TICKS(10));
-        ESP_ERROR_CONTINUE(size <= 0, "");
-
-        ret = espnow_send(ESPNOW_DATA_TYPE_DATA, ESPNOW_ADDR_BROADCAST, data, size, &frame_head, portMAX_DELAY);
-        ESP_ERROR_CONTINUE(ret != ESP_OK, "<%s> espnow_send", esp_err_to_name(ret));
-
-        ESP_LOGI(TAG, "espnow_send, count: %" PRIu32 ", size: %u, data: %s", count++, size, data);
-        memset(data, 0, ESPNOW_DATA_LEN);
-    }
-
-    ESP_LOGI(TAG, "Uart handle task is exit");
-
-    ESP_FREE(data);
-    vTaskDelete(NULL);
-}
-
-static void app_uart_initialize()
-{
-    uart_config_t uart_config = {
-        .baud_rate = UART_BAUD_RATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity    = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-#if SOC_UART_SUPPORT_REF_TICK
-        .source_clk = UART_SCLK_REF_TICK,
-#elif SOC_UART_SUPPORT_XTAL_CLK
-        .source_clk = UART_SCLK_XTAL,
-#endif
-    };
-
-    ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM, UART_TX_IO, UART_RX_IO, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-    ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM, 8 * ESPNOW_DATA_LEN, 8 * ESPNOW_DATA_LEN, 0, NULL, 0));
-
-    xTaskCreate(app_uart_read_task, "app_uart_read_task", 4 * 1024, NULL, tskIDLE_PRIORITY + 1, NULL);
-}
-
-
-static esp_err_t app_uart_write_handle(uint8_t *src_addr, void *data,
-                                       size_t size, wifi_pkt_rx_ctrl_t *rx_ctrl)
-{
-    ESP_PARAM_CHECK(src_addr);
-    ESP_PARAM_CHECK(data);
-    ESP_PARAM_CHECK(size);
-    ESP_PARAM_CHECK(rx_ctrl);
-
-    static uint32_t count = 0;
-
-    ESP_LOGI(TAG, "espnow_recv, <%" PRIu32 "> [" MACSTR "][%d][%d][%u]: %.*s",
-             count++, MAC2STR(src_addr), rx_ctrl->channel, rx_ctrl->rssi, size, size, (char *)data);
-
-    return ESP_OK;
-}
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
@@ -151,7 +87,6 @@ void app_main()
     uint8_t peer_mac[6] = PEER_MAC_ADDR;
 
     espnow_storage_init();
-    app_uart_initialize();
 
     // wifi initialize section
     if (init() != ESP_OK) {
@@ -178,7 +113,6 @@ void app_main()
     // TCP IP Stack setup
     set_up_tcpip_stack(cfg);
 
-    
     ESP_ERROR_CHECK( esp_now_init());
     // Add peer
     uint8_t primary;
@@ -222,7 +156,6 @@ void app_main()
     esp_now_register_recv_cb(app_recv_cb_handle);
 
     //httpd_handle_t server = start_websocket();
-
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));

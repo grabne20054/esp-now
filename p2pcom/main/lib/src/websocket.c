@@ -3,6 +3,14 @@
 
 #include "../include/websocket.h"
 
+
+static const httpd_uri_t ws = {
+        .uri        = "/ws",
+        .method     = HTTP_GET,
+        .handler    = echo_handler,
+        .user_ctx   = NULL,
+};
+
 static httpd_handle_t start_websocket(void)
 {
     httpd_handle_t server = NULL;
@@ -30,9 +38,37 @@ static void send_response(httpd_req_t *req)
 
 static esp_err_t echo_handler(httpd_req_t *req)
 {
+    queue_t * unq_queue = get_unq_queue();
 
     ESP_LOGI(WEBSOCKETTAG, "Got Request");
-    send_response(req);
+
+    //e_actions_t action;
+
+    char action = 'o'; // to do choose action based on ws conn
+
+    switch (action)
+    {
+    case 'o':
+        action=0;
+        break;
+    
+    default:
+        break;
+    }
+
+    while (!pthread_mutex_lock(unq_queue->mutex))
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    if (add_to_queue(action, unq_queue))
+    {
+        data_stream_t * stream = dequeue(unq_queue);
+
+        bool res = transmit(stream);
+    }
+
+    pthread_mutex_unlock(unq_queue->mutex);
 
     return ESP_OK;
 
@@ -43,6 +79,5 @@ static esp_err_t stop_websocket(httpd_handle_t server)
     // Stop the httpd server
     return httpd_stop(server);
 }
-
 
 #endif

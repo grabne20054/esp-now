@@ -17,6 +17,8 @@ queue_t * create(int max_size)
     instance->front = 0;
     instance->current_size = 0;
     instance->data_stream = malloc(instance->max_size * sizeof(void*));
+    
+    pthread_mutex_init(&instance->mutex, NULL);
 
     return instance;
 
@@ -25,13 +27,15 @@ queue_t * create(int max_size)
 
 bool enqueue(queue_t * instance, void * data_stream)
 {
-    if ((instance->current_size == instance->max_size) || (data_stream == NULL))
+    if ((instance->current_size == instance->max_size) || (data_stream == NULL) || (!pthread_mutex_trylock(&instance->mutex)))
     {
         return false;
     } else {
         instance->rear = (instance->rear + 1 ) % instance->max_size;
         ((void**) instance->data_stream)[instance->rear] = data_stream;
         instance->current_size++;
+
+        ESP_LOGI(QUEUE_TAG, "enqueue succ");
         return true;
     }
     

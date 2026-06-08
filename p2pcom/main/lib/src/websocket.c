@@ -60,12 +60,7 @@ static esp_err_t echo_handler(httpd_req_t *req)
 
     if (add_succ)
     {
-        while (!pthread_mutex_trylock(unq_queue->mutex))
-        {
-            vTaskDelay(pdMS_TO_TICKS(1000));
-        }
-
-        pthread_mutex_lock(unq_queue->mutex);
+        pthread_mutex_lock(&unq_queue->mutex);
 
         esp_err_t err = transmit((data_stream_t *) unq_queue->data_stream);
     
@@ -75,9 +70,7 @@ static esp_err_t echo_handler(httpd_req_t *req)
         return 0;
     }
 
-
-
-    pthread_mutex_unlock(unq_queue->mutex);
+    pthread_mutex_unlock(&unq_queue->mutex);
 
     return ESP_OK;
 

@@ -7,8 +7,10 @@ Header File for Queuing Transmit Request
 #include "data.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include "esp_log.h"
 
 #define MAX_QUEUE_SIZE 7
+static const char *QUEUE_TAG = "queue";
 
 queue_t * create(int max_size);
 

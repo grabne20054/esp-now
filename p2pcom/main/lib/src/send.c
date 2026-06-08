@@ -21,6 +21,8 @@ static data_stream_t * prepare_data_stream(e_actions_t action)
     uint32_t crc = crc32(stream, (sizeof(*stream)));
     stream->crc = crc;
 
+    ESP_LOGI(SEND_TAG, "prepare data succ");
+
     return stream;
 
 }
@@ -30,12 +32,31 @@ bool add_to_queue(e_actions_t action, queue_t *unq_queue)
 {
     data_stream_t * stream = prepare_data_stream(action);
 
-    return enqueue(unq_queue, (void*)stream);
+    bool add_succ = enqueue(unq_queue, (void*)stream);
+
+    ESP_LOGI(SEND_TAG, "bool add_succ: %d", add_succ);
+
+    while (!add_succ)
+    {
+       vTaskDelay(pdMS_TO_TICKS(1000));
+    
+       ESP_LOGI(SEND_TAG, "trying add queue");
+
+       add_succ = enqueue(unq_queue, (void*)stream);
+    }
+
+    return add_succ;
+
 }
 
 esp_err_t transmit(data_stream_t * stream)
 {
-    ESP_ERROR_CHECK( esp_now_send(stream->dest, (uint8_t*)stream, sizeof(*stream)));
+    global_seq++;
+
+    stream->seq = global_seq;
+    esp_now_send(stream->dest, (uint8_t*)stream, sizeof(*stream));
+
+    waiting_for_recv=true;
 
     return ESP_OK;
 }

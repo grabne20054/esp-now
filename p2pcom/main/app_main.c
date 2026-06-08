@@ -1,3 +1,5 @@
+#ifndef APP_MAIN_C
+#define APP_MAIN_C
 /* Get Start Example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
@@ -27,7 +29,7 @@
 
 #include "lib/include/engine.h"
 
-#include "lib/src/helpers.c"
+#include "lib/include/helpers.h"
 
 #include "lib/include/websocket.h"
 
@@ -45,13 +47,7 @@
 
 #define SWITCH 0 // 0=ws side   1=field side
 
-#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x4a, 0x6c}  // placeholder
-
 static const char *TAG = "app_main";
-
-// global var for communication
-volatile uint32_t global_seq;
-volatile bool waiting_for_recv;
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
@@ -74,14 +70,27 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
     data_payload->crc = 0;
 
-    if (response_crc == crc32(data_payload, sizeof(*data_payload)))
+    if ((data_payload->seq == global_seq) && (waiting_for_recv))
     {
-        ESP_LOGI(TAG, "Success CRC are correct");
+        ESP_LOGI(TAG, "right package recv");
+
+        if (response_crc == crc32(data_payload, sizeof(*data_payload)))
+        {
+            ESP_LOGI(TAG, "Success CRC are correct");
+        }
+        else {
+            ESP_LOGE(TAG, "Error CRC");
+        }
+
+        // ready to perform desired action
+
     }
-    else {
-        ESP_LOGE(TAG, "Error CRC");
+    else 
+    {
+        ESP_LOGI(TAG, "package not looking for drop it");
+        //free(payload);
+        free(data_payload);
     }
-    
 
 }
 
@@ -160,6 +169,8 @@ void app_main()
 
     //httpd_handle_t server = start_websocket();
 
+
+
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
@@ -181,8 +192,43 @@ void app_main()
 
         free(data);*/
 
-        ESP_LOGI( TAG, "test queue: %d", test_queue());
+       //ESP_LOGI( TAG, "test queue: %d", test_queue());
+
+        queue_t * unq_queue = get_unq_queue();
+
+        ESP_LOGI(WEBSOCKETTAG, "Got Request");
+
+        //e_actions_t action;
+
+        char action = 'o'; // to do choose action based on ws conn
+
+        switch (action)
+        {
+        case 'o':
+            action=0;
+            break;
         
-    }
+        default:
+            break;
+        }
+
+        bool add_succ = add_to_queue(action, unq_queue);
+
+        if (add_succ)
+        {
+            pthread_mutex_lock(&unq_queue->mutex);
+
+            esp_err_t err = transmit((data_stream_t *) unq_queue->data_stream);
+        
+        }
+        else
+        {
+            return;
+        }
+
+        pthread_mutex_unlock(&unq_queue->mutex);
+            
+        }
 
 }
+#endif

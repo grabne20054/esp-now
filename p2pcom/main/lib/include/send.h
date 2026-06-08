@@ -4,14 +4,16 @@
 #include "espnow.h"
 #include "espnow_storage.h"
 #include "espnow_utils.h"
+#include <pthread.h>
 
 #include "data.h"
-#include "../src/helpers.c"
+#include "../include/helpers.h"
 #include "queue.h"
 
-#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x4a, 0x6c}  // placeholder
+#define PEER_MAC_ADDR {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x64}  // placeholder
 #define MAX_TTL 100
 
+static const char *SEND_TAG = "send";
 
 
 static data_stream_t * prepare_data_stream(e_actions_t action);

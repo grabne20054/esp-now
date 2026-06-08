@@ -49,7 +49,7 @@ typedef struct queue {
     size_t front, rear, max_size, current_size;
     void * data_stream;
 
-    pthread_mutex_t * mutex;
+    pthread_mutex_t mutex;
 
 
 } queue_t;

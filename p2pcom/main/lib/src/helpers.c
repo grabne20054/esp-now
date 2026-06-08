@@ -1,9 +1,16 @@
 #ifndef HELPERS_C
 #define HELPERS_C
 
+#include "../include/helpers.h"
+
 #include <stdlib.h>
+#include "esp_log.h"
 
 static const char *TAG_HELPERS = "helpers";
+
+// global var for communication
+volatile uint32_t global_seq;
+volatile bool waiting_for_recv;
 
 uint32_t crc32(const void *data, size_t length)
 {
@@ -27,6 +34,12 @@ uint32_t crc32(const void *data, size_t length)
 
     return ~crc;
 }
+
+
+/*
+
+ESP NOW Callbacks
+*/
 
 
 #endif

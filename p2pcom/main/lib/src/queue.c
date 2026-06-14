@@ -14,9 +14,9 @@ queue_t * create(int max_size)
     queue_t * instance = malloc(sizeof(queue_t));
 
     instance->max_size = max_size;
-    instance->front = 0;
-    instance->current_size = 0;
-    instance->data_stream = malloc(instance->max_size * sizeof(void*));
+    instance->front = instance->current_size = 0;
+    instance->rear = instance->max_size - 1;
+    instance->data_stream_array = malloc(max_size * sizeof(data_stream_t));
     
     pthread_mutex_init(&instance->mutex, NULL);
 
@@ -25,20 +25,31 @@ queue_t * create(int max_size)
 }
 
 
-bool enqueue(queue_t * instance, void * data_stream)
+bool enqueue(queue_t *instance, data_stream_t * data_stream)
 {
-    if ((instance->current_size == instance->max_size) || (data_stream == NULL) || (!pthread_mutex_trylock(&instance->mutex)))
-    {
+    if (instance == NULL || data_stream == NULL)
         return false;
-    } else {
-        instance->rear = (instance->rear + 1 ) % instance->max_size;
-        ((void**) instance->data_stream)[instance->rear] = data_stream;
+
+    if (pthread_mutex_trylock(&instance->mutex) != 0)
+        return false;
+
+    bool success = false;
+
+    if (instance->current_size < instance->max_size)
+    {
+        instance->rear = (instance->rear + 1) % instance->max_size;
+
+        instance->data_stream_array[instance->rear] = *data_stream;
+
         instance->current_size++;
 
         ESP_LOGI(QUEUE_TAG, "enqueue succ");
-        return true;
+        success = true;
     }
-    
+
+    pthread_mutex_unlock(&instance->mutex);
+
+    return success;
 }
 
 bool is_empty(queue_t * instance)
@@ -46,14 +57,10 @@ bool is_empty(queue_t * instance)
     return (instance->current_size == 0);
 }
 
-void * dequeue(queue_t * instance)
+data_stream_t dequeue(queue_t * instance)
 {
-    if (is_empty(instance))
-    {
-        return NULL;
-    }
+    data_stream_t data_stream = instance->data_stream_array[instance->front];
 
-    void * data_stream = ((void **)instance->data_stream)[instance->front];
     instance->front = (instance->front + 1) % instance->max_size;
     instance->current_size--;
     return data_stream;
@@ -62,7 +69,7 @@ void * dequeue(queue_t * instance)
 
 void destroy(queue_t * instance)
 {
-    free(instance->data_stream);
+    free(instance->data_stream_array);
     free(instance);
 }
 
@@ -98,11 +105,9 @@ bool test_queue()
 
     printf("is empty %d\n", is_empty(queue1));
 
-    void * stream = dequeue(queue1);
+    data_stream_t stream = dequeue(queue1);
 
-    auto payload = (data_stream_t *) (stream);
-
-    printf("ttl: %ld", payload->ttl);
+    printf("ttl: %ld", stream.ttl);
 
     if (queue==queue1)
     {

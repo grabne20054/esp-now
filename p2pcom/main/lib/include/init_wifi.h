@@ -26,6 +26,6 @@ esp_err_t set_mode(void);
 
 esp_err_t get_mac(uint8_t mac[6]);
 
-void set_up_tcpip_stack(wifi_config_t conf);
+bool set_up_tcpip_stack(wifi_config_t conf);
 
 #endif // INIT_WIFI_HPP

@@ -35,6 +35,8 @@
 
 #include "lib/include/queue.h"
 
+// 0a 64 is ws, 4a 6c is fieldside
+
 
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
@@ -70,19 +72,27 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
     data_payload->crc = 0;
 
+    ESP_LOGI(TAG, "global seq: %d", global_seq);
+    ESP_LOGI(TAG, "local seq: %d", data_payload->seq);
+
     if ((data_payload->seq == global_seq) && (waiting_for_recv))
     {
         ESP_LOGI(TAG, "right package recv");
+        waiting_for_recv=false;
 
         if (response_crc == crc32(data_payload, sizeof(*data_payload)))
         {
+            
             ESP_LOGI(TAG, "Success CRC are correct");
+
+            queue_t * unq_queue = get_unq_queue();
+
+            // ready to perform desired action
+            bool recvadd = add_to_queue(data_payload, unq_queue);
         }
         else {
             ESP_LOGE(TAG, "Error CRC");
         }
-
-        // ready to perform desired action
 
     }
     else 
@@ -123,7 +133,7 @@ void app_main()
     };
  
     // TCP IP Stack setup
-    set_up_tcpip_stack(cfg);
+    bool tcipres = set_up_tcpip_stack(cfg);
 
     ESP_ERROR_CHECK( esp_now_init());
     // Add peer
@@ -167,68 +177,49 @@ void app_main()
     esp_now_register_send_cb(app_send_cb_handle);
     esp_now_register_recv_cb(app_recv_cb_handle);
 
-    //httpd_handle_t server = start_websocket();
+    if (tcipres)
+    {
+        httpd_handle_t server = start_websocket();
+    }
+    else
+    {
 
 
+        queue_t * queue = get_unq_queue();
 
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-        /*e_actions_t action = 2;
-        time_t rawtime;
-
-        data_stream_t *data = malloc(sizeof(data_stream_t));
-        data->command = action;
-        memcpy(data->dest, peer_mac, 6);
-        data->sent = time(&rawtime);
-        data->ttl = 1212;
-
-        data->crc = 0;
-
-        uint32_t crc = crc32(data, sizeof(*data));
-        data->crc = crc;
-
-        ESP_ERROR_CHECK(esp_now_send(peer_mac,(uint8_t*)data , sizeof(*data)));
-
-        free(data);*/
-
-       //ESP_LOGI( TAG, "test queue: %d", test_queue());
-
-        queue_t * unq_queue = get_unq_queue();
-
-        ESP_LOGI(WEBSOCKETTAG, "Got Request");
-
-        //e_actions_t action;
-
-        char action = 'o'; // to do choose action based on ws conn
-
-        switch (action)
+        while (1)
         {
-        case 'o':
-            action=0;
-            break;
-        
-        default:
-            break;
-        }
+            if (!is_empty(queue))
+            {
+                data_stream_t stream = dequeue(queue);
 
-        bool add_succ = add_to_queue(action, unq_queue);
+                // engine inf here
+                // simulating engine 
+                vTaskDelay(pdMS_TO_TICKS(1000));
 
-        if (add_succ)
-        {
-            pthread_mutex_lock(&unq_queue->mutex);
+                e_actions_t action = 4;
 
-            esp_err_t err = transmit((data_stream_t *) unq_queue->data_stream);
-        
-        }
-        else
-        {
-            return;
-        }
+                data_stream_t * resstream = prepare_data_stream(action);
 
-        pthread_mutex_unlock(&unq_queue->mutex);
+                // locking!!
+
+                ESP_ERROR_CHECK(transmit(resstream));
+
+
+            }
+            else
+            {
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                ESP_LOGI(TAG, "waiting...");
+                continue;
+
+            }
             
         }
+    
+    
+    }
 
 }
+
 #endif

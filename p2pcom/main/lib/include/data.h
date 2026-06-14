@@ -16,7 +16,9 @@ typedef enum engine_actions{
     OPEN=0,
     CLOSE=1,
     GETSTATUS=2,
-    GETPOSITION=3
+    GETPOSITION=3,
+
+    RESPONSE=4
 
 }e_actions_t;
 
@@ -47,7 +49,7 @@ should only be initialized once per node (static)
 typedef struct queue {
 
     size_t front, rear, max_size, current_size;
-    void * data_stream;
+    data_stream_t * data_stream_array;
 
     pthread_mutex_t mutex;
 

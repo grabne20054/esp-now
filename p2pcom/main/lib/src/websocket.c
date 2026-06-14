@@ -11,7 +11,7 @@ static const httpd_uri_t ws = {
         .user_ctx   = NULL,
 };
 
-static httpd_handle_t start_websocket(void)
+httpd_handle_t start_websocket(void)
 {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -36,9 +36,14 @@ static void send_response(httpd_req_t *req)
 }
 
 
-static esp_err_t echo_handler(httpd_req_t *req)
+esp_err_t echo_handler(httpd_req_t *req)
 {
     queue_t * unq_queue = get_unq_queue();
+    if (unq_queue == NULL)
+    {
+        ESP_LOGI(WEBSOCKETTAG, "Queue DEAD");
+    }
+    
 
     ESP_LOGI(WEBSOCKETTAG, "Got Request");
 
@@ -57,26 +62,25 @@ static esp_err_t echo_handler(httpd_req_t *req)
     }
 
     bool add_succ = add_to_queue(action, unq_queue);
+    ESP_LOGI(WEBSOCKETTAG, "Adding Queue: %d", add_succ);
 
     if (add_succ)
     {
         pthread_mutex_lock(&unq_queue->mutex);
 
-        esp_err_t err = transmit((data_stream_t *) unq_queue->data_stream);
+        data_stream_t dequeued_ds = dequeue(unq_queue);
+
+
+        esp_err_t err = transmit(&dequeued_ds);
+
+        pthread_mutex_unlock(&unq_queue->mutex);
     
     }
-    else
-    {
-        return 0;
-    }
-
-    pthread_mutex_unlock(&unq_queue->mutex);
-
     return ESP_OK;
 
 }
 
-static esp_err_t stop_websocket(httpd_handle_t server)
+esp_err_t stop_websocket(httpd_handle_t server)
 {
     // Stop the httpd server
     return httpd_stop(server);

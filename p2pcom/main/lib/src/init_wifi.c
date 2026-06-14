@@ -75,7 +75,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-void set_up_tcpip_stack(wifi_config_t config)
+bool set_up_tcpip_stack(wifi_config_t config)
 {
     s_wifi_event_group = xEventGroupCreate();
 
@@ -114,11 +114,14 @@ void set_up_tcpip_stack(wifi_config_t config)
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG_WIFI, "connected to ap SSID:%s password:%s",
                  config.sta.ssid, config.sta.password);
+                 return true;
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG_WIFI, "Failed to connect to SSID:%s, password:%s",
                  config.sta.ssid, config.sta.password);
+                 return false;
     } else {
         ESP_LOGE(TAG_WIFI, "UNEXPECTED EVENT");
+        return true;
     }
 }
 

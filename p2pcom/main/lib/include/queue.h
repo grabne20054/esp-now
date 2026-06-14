@@ -8,15 +8,17 @@ Header File for Queuing Transmit Request
 #include <stdbool.h>
 #include <stdlib.h>
 #include "esp_log.h"
+#include "esp_mac.h"
+
 
 #define MAX_QUEUE_SIZE 7
 static const char *QUEUE_TAG = "queue";
 
 queue_t * create(int max_size);
 
-bool enqueue(queue_t * instance, void * data_stream_t);
+bool enqueue(queue_t * instance, data_stream_t * data_stream);
 
-void * dequeue(queue_t * instance);
+data_stream_t dequeue(queue_t * instance);
 
 bool is_empty(queue_t * instance);
 

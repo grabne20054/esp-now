@@ -11,11 +11,11 @@
 static const char *WEBSOCKETTAG = "ws_socket";
 
 
-static esp_err_t echo_handler(httpd_req_t *req);
+esp_err_t echo_handler(httpd_req_t *req);
 
-static httpd_handle_t start_websocket(void);
+httpd_handle_t start_websocket(void);
 
-static esp_err_t stop_websocket(httpd_handle_t server);
+esp_err_t stop_websocket(httpd_handle_t server);
 
 
 #endif

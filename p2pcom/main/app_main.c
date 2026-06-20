@@ -51,7 +51,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "here");
 
-    motor_forward(PWM_MAX_DUTY /2);
+    motor_forward(PWM_MAX_DUTY/2);
 
     vTaskDelay(pdMS_TO_TICKS(10000));
 

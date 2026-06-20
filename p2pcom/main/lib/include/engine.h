@@ -6,8 +6,8 @@
 #include <driver/ledc.h>
 #include "esp_err.h"
 
-#define RPWM_GPIO 25
-#define LPWM_GPIO 26
+#define RPWM_GPIO 18
+#define LPWM_GPIO 19
 
 #define PWM_FREQ 20000
 #define PWM_RES LEDC_TIMER_10_BIT

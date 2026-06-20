@@ -127,7 +127,7 @@ esp_err_t transmit(data_stream_t *stream)
     
     waiting_for_recv=true;
 
-    return ESP_OK;
+    return res;
 }
 
 

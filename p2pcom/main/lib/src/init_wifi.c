@@ -20,13 +20,18 @@ static EventGroupHandle_t s_wifi_event_group;
 
 esp_err_t init()
 {
-    esp_event_loop_create_default();
+   esp_event_loop_create_default();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    if (SWITCH==1)
+    {
+       ESP_ERROR_CHECK(esp_wifi_start());
+    }
 
     ESP_LOGI(TAG_WIFI, "WiFi initialized successfully");
 
@@ -124,5 +129,61 @@ bool set_up_tcpip_stack(wifi_config_t config)
         return true;
     }
 }
+
+static void set_channel(uint8_t channel)
+{
+    ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
+    ESP_LOGI(TAG_WIFI, "WiFi channel set to %d", channel);
+}
+
+#if SWITCH == 1
+bool hopping_channel()
+{
+    ESP_LOGI(TAG_WIFI, "Starting channel hopping to find peer...");
+    bool found = false;
+
+    for (uint8_t channel = 1; channel <= 13; channel++) {
+        set_channel(channel);
+
+        peer.channel = channel;
+
+        vTaskDelay(pdMS_TO_TICKS(1000)); // wait for a while on the new channel
+
+        // send a test frame to check if the peer is on this channel
+        data_stream_t *test_stream = prepare_data_stream(0); // action 0 for testing
+
+        xEventGroupClearBits(espnow_event_channel_found, BIT0);
+
+        transmit(test_stream);
+
+        EventBits_t bits =
+        xEventGroupWaitBits(
+        espnow_event_channel_found,
+        BIT0,
+        pdTRUE,
+        pdFALSE,
+        pdMS_TO_TICKS(300));
+
+        if (bits & BIT0)
+        {
+            ESP_LOGI(TAG_WIFI, "Peer found on channel %d", channel);
+            last_good_channel = channel; // update last good channel
+
+            found = true;
+            break; // stop searching
+        }
+
+        ESP_LOGI(TAG_WIFI, "Peer not found on channel %d, continue", channel);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    if (found) {
+        return true;
+    }
+
+    ESP_LOGE(TAG_WIFI, "Peer not found on any channel, reverting to last known good channel %d", last_good_channel);
+    return false;
+}
+#endif 
 
 #endif //INIT_WIFI_CPP

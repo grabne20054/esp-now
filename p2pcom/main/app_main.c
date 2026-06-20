@@ -44,18 +44,36 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "TP-Link_AA48"
-#define PASS "17298865"
-
-#define SWITCH 0 // 0=ws side   1=field side
+#define SSID "gramesch"
+#define PASS "gramesch!?"
 
 static const char *TAG = "app_main";
+
+static EventGroupHandle_t espnow_event_channel_found;
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
     if (!tx_info) return;
     ESP_LOGI(TAG, "Send callback called, dest=" MACSTR ", src=" MACSTR ", status=%s",
              MAC2STR(tx_info->des_addr), MAC2STR(tx_info->src_addr), esp_err_to_name(status));
+    #if SWITCH == 1
+    if (status == ESP_NOW_SEND_SUCCESS)
+    {
+        peer_found = true;
+        ESP_LOGI(TAG, "Peer found, setting peer_found to true");
+    }
+    else
+    {
+        peer_found = false;
+    }
+    #endif
+
+
+    if (status == ESP_OK) {
+        ESP_LOGI(TAG, "Data sent successfully");
+    } else {
+        ESP_LOGE(TAG, "Data send failed with status: %d", status);
+    }
 }
 
 void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data, int size)
@@ -89,6 +107,15 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
             // ready to perform desired action
             bool recvadd = add_to_queue(data_payload, unq_queue);
+            if (recvadd)
+            {
+                ESP_LOGI(TAG, "Data added to queue successfully");
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Failed to add data to queue");
+            }
+            free(data_payload);
         }
         else {
             ESP_LOGE(TAG, "Error CRC");
@@ -119,32 +146,44 @@ void app_main()
         ESP_LOGE(TAG, "Failed to set WiFi mode");
         return;
     }
+    
 
     uint8_t mac[6];
-    esp_wifi_get_mac(ESPNOW_WIFI_IF, mac);
+    esp_wifi_get_mac(WIFI_IF_STA, mac);
     ESP_LOGI(TAG, "WiFi MAC address: [" MACSTR "]", MAC2STR(mac));
 
-    wifi_config_t cfg = {
+    
+    ESP_ERROR_CHECK( esp_now_init());
+
+    // setup tcpip stack if on ws side
+    if (SWITCH == 0)
+    {
+
+        wifi_config_t cfg = {
         .sta = {
             .ssid = SSID,
             .password = PASS,
 
         }
-    };
- 
-    // TCP IP Stack setup
-    bool tcipres = set_up_tcpip_stack(cfg);
+        };
+        bool restcip = set_up_tcpip_stack(cfg);
+        if (!restcip)
+        {
+            ESP_LOGE(TAG, "Failed to set up TCP/IP stack");
+            return;
+        }
+    }
 
-    ESP_ERROR_CHECK( esp_now_init());
-    // Add peer
     uint8_t primary;
     wifi_second_chan_t second;
     esp_wifi_get_channel(&primary, &second);
 
+    ESP_LOGI(TAG, "Current WiFi channel: %d", primary);
 
-    esp_now_peer_info_t peer = {0};
     memcpy(peer.peer_addr, peer_mac, 6);
-    peer.channel = primary;
+    #if SWITCH == 0
+    peer.channel = primary; // set to current channel
+    #endif
     peer.encrypt = false;
     peer.ifidx = WIFI_IF_STA;
 
@@ -177,12 +216,24 @@ void app_main()
     esp_now_register_send_cb(app_send_cb_handle);
     esp_now_register_recv_cb(app_recv_cb_handle);
 
-    if (tcipres)
-    {
+   
+
+    if (SWITCH == 0)
+    {   
         httpd_handle_t server = start_websocket();
     }
-    else
+    #if SWITCH == 1
+    else if (SWITCH == 1)
     {
+
+        // main loop for field side
+
+        // perform channel hopping if on field side
+        if (!hopping_channel())
+        {
+            ESP_LOGI(TAG, "Failed to find peer during channel hopping, continuing with last known good channel");
+            return;
+        }
 
 
         queue_t * queue = get_unq_queue();
@@ -219,6 +270,7 @@ void app_main()
     
     
     }
+    #endif
 
 }
 

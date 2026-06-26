@@ -5,10 +5,6 @@
 
 static const char *TAG = "ENGINE";
 
-#define R_EN_GPIO 27
-#define L_EN_GPIO 14
-
-
 void pwm_init(void)
 {
     gpio_config_t en_conf = {
@@ -67,6 +63,8 @@ void motor_forward(uint16_t duty)
 
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
+
+    ESP_LOGI(TAG, "Motor forward with duty: %d", duty);
 }
 
 void motor_backward(uint16_t duty)
@@ -76,6 +74,8 @@ void motor_backward(uint16_t duty)
 
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+
+    ESP_LOGI(TAG, "Motor backward with duty: %d", duty);
 }
 
 void motor_stop(void)

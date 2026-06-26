@@ -16,6 +16,10 @@ static const char *TAG_WIFI = "init_wifi";
 
 static int s_retry_num = 0;
 
+#if SWITCH == 1
+uint8_t last_good_channel = 1; // default to channel 1
+#endif
+
 static EventGroupHandle_t s_wifi_event_group;
 
 esp_err_t init()
@@ -139,6 +143,13 @@ static void set_channel(uint8_t channel)
 #if SWITCH == 1
 bool hopping_channel()
 {
+
+    if (channel_hopping == NULL)
+    {
+        ESP_LOGE(TAG_WIFI, "Channel hopping event group is NULL");
+        return false;
+    }
+
     ESP_LOGI(TAG_WIFI, "Starting channel hopping to find peer...");
     bool found = false;
 
@@ -151,34 +162,26 @@ bool hopping_channel()
 
         // send a test frame to check if the peer is on this channel
         data_stream_t *test_stream = prepare_data_stream(0); // action 0 for testing
-
-        xEventGroupClearBits(espnow_event_channel_found, BIT0);
-
+        
         transmit(test_stream);
 
-        EventBits_t bits =
-        xEventGroupWaitBits(
-        espnow_event_channel_found,
-        BIT0,
-        pdTRUE,
-        pdFALSE,
-        pdMS_TO_TICKS(300));
+        EventBits_t bits = xEventGroupWaitBits(channel_hopping, BIT0 | BIT1, pdFALSE, pdFALSE, portMAX_DELAY);
 
-        if (bits & BIT0)
+
+        ESP_LOGI(TAG_WIFI, "Checking if peer is found on channel %d", channel);
+        ESP_LOGI(TAG_WIFI, "peer_found: %d", peer_found);
+
+        if (bits & BIT0 && !(bits & BIT1))
         {
             ESP_LOGI(TAG_WIFI, "Peer found on channel %d", channel);
             last_good_channel = channel; // update last good channel
 
-            found = true;
-            break; // stop searching
+            xEventGroupClearBits(channel_hopping, BIT0); // clear the event bit for next time
+            return true;
         }
 
         ESP_LOGI(TAG_WIFI, "Peer not found on channel %d, continue", channel);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-
-    if (found) {
-        return true;
+        xEventGroupClearBits(channel_hopping, BIT1);
     }
 
     ESP_LOGE(TAG_WIFI, "Peer not found on any channel, reverting to last known good channel %d", last_good_channel);

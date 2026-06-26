@@ -12,6 +12,10 @@ static const char *TAG_HELPERS = "helpers";
 volatile uint32_t global_seq;
 volatile bool waiting_for_recv;
 
+#if SWITCH == 1
+EventGroupHandle_t channel_hopping = NULL;
+#endif
+
 uint32_t crc32(const void *data, size_t length)
 {
     const uint8_t *bytes = (const uint8_t *)data;

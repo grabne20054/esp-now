@@ -11,20 +11,17 @@
 
 #include "esp_wifi.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-
 #include "esp_log.h"
 #include "esp_system.h"
 
+#include "globals.h"
 #include "send.h"
+
 
 static esp_now_peer_info_t peer = {0};
 
 #if SWITCH == 1
-static uint8_t last_good_channel = 6;
-static bool peer_found = false; // always false
+extern uint8_t last_good_channel;
 #endif
 
 esp_err_t init(void);
@@ -43,4 +40,4 @@ bool set_up_tcpip_stack(wifi_config_t conf);
 bool hopping_channel(void);
 #endif
 
-#endif // INIT_WIFI_HPP
+#endif // INIT_WIFI_HPPyy

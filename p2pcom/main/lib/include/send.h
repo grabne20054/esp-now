@@ -8,7 +8,7 @@
 
 #include "data.h"
 #include "../include/helpers.h"
-#include "queue.h"
+#include "data_queue.h"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0)
 #include "esp_mac.h"
@@ -33,8 +33,6 @@
 )(X, Q)
 
 static const char *SEND_TAG = "send";
-
-EventGroupHandle_t espnow_event_channel_found;
 
 data_stream_t * prepare_data_stream(e_actions_t action);
 

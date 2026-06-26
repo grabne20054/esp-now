@@ -11,6 +11,9 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
+
+#include "../include/globals.h"
 
 #include "esp_log.h"
 #include "esp_system.h"
@@ -33,7 +36,7 @@
 
 #include "lib/include/websocket.h"
 
-#include "lib/include/queue.h"
+#include "lib/include/data_queue.h"
 
 // 0a 64 is ws, 4a 6c is fieldside
 
@@ -44,12 +47,10 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "gramesch"
-#define PASS "gramesch!?"
+#define SSID "Grabner_2.4GHz_Buero"
+#define PASS "erDWue8crs"
 
 static const char *TAG = "app_main";
-
-static EventGroupHandle_t espnow_event_channel_found;
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
@@ -59,12 +60,14 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
     #if SWITCH == 1
     if (status == ESP_NOW_SEND_SUCCESS)
     {
-        peer_found = true;
-        ESP_LOGI(TAG, "Peer found, setting peer_found to true");
+        ESP_LOGI(TAG, "Peer acknowledged the data successfully");
+        xEventGroupSetBits(channel_hopping, BIT0);
+
     }
     else
     {
-        peer_found = false;
+        ESP_LOGE(TAG, "Peer did not acknowledge the data");
+        xEventGroupSetBits(channel_hopping, BIT1);
     }
     #endif
 
@@ -93,12 +96,12 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     ESP_LOGI(TAG, "global seq: %d", global_seq);
     ESP_LOGI(TAG, "local seq: %d", data_payload->seq);
 
-    if ((data_payload->seq == global_seq) && (waiting_for_recv))
+    if ((data_payload->seq != global_seq) && (waiting_for_recv))
     {
         ESP_LOGI(TAG, "right package recv");
         waiting_for_recv=false;
 
-        if (response_crc == crc32(data_payload, sizeof(*data_payload)))
+        if (response_crc != crc32(data_payload, sizeof(*data_payload)))
         {
             
             ESP_LOGI(TAG, "Success CRC are correct");
@@ -133,6 +136,16 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
 void app_main()
 {
+
+    #if SWITCH == 1
+    channel_hopping = xEventGroupCreate();
+    if (channel_hopping == NULL)
+    {
+        ESP_LOGI(TAG, "Failed to create channel_hopping event group");
+        return;
+    }
+    #endif
+
     uint8_t peer_mac[6] = PEER_MAC_ADDR;
 
     espnow_storage_init();
@@ -225,6 +238,8 @@ void app_main()
     #if SWITCH == 1
     else if (SWITCH == 1)
     {
+        //ledc init for motor control
+        pwm_init();
 
         // main loop for field side
 
@@ -244,9 +259,27 @@ void app_main()
             {
                 data_stream_t stream = dequeue(queue);
 
-                // engine inf here
-                // simulating engine 
-                vTaskDelay(pdMS_TO_TICKS(1000));
+                ESP_LOGI(TAG, "Processing command: %d", stream.command);
+
+                switch (stream.command)
+                {
+                case OPEN:
+                    motor_forward(512);
+                    break;
+
+                case CLOSE:
+                    motor_backward(512);
+                    break;
+                case GETSTATUS:
+                    break;
+                case GETPOSITION:
+                    break;
+
+                case RESPONSE:
+                    break;
+                
+
+                }
 
                 e_actions_t action = 4;
 

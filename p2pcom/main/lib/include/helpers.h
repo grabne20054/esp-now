@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "send.h"
+
 extern volatile uint32_t global_seq;
 extern volatile bool waiting_for_recv;
 

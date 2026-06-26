@@ -5,8 +5,8 @@
 
 static const char *TAG = "ENGINE";
 
-#define R_EN_GPIO 27
-#define L_EN_GPIO 14
+#define R_EN_GPIO 25
+#define L_EN_GPIO 26
 
 
 void pwm_init(void)

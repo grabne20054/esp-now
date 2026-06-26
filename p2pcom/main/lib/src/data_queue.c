@@ -1,7 +1,7 @@
 #ifndef QUEUE_C
 #define QUEUE_C
 
-#include "../include/queue.h"
+#include "../include/data_queue.h"
 #include <stdio.h>
 
 queue_t * create(int max_size)

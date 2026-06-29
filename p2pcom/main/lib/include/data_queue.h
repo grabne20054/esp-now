@@ -10,6 +10,8 @@ Header File for Queuing Transmit Request
 #include "esp_log.h"
 #include "esp_mac.h"
 
+#include "freertos/FreeRTOS.h"
+
 
 #define MAX_QUEUE_SIZE 7
 static const char *QUEUE_TAG = "queue";
@@ -27,6 +29,8 @@ void destroy(queue_t * instance);
 queue_t * get_unq_queue();
 
 bool test_queue();
+
+void do_queue(void *pvParameters);
 
 
 #endif

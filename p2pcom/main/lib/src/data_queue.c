@@ -117,4 +117,27 @@ bool test_queue()
     return false;
 }
 
+void do_queue(void *pvParameters)
+{
+    queue_t * queue = get_unq_queue();
+
+    while (1)
+    {
+        if (!is_empty(queue))
+        {
+            data_stream_t stream = dequeue(queue);
+
+            ESP_LOGI(QUEUE_TAG, "Processing command: %d", stream.command);
+
+            // Process the command here
+        }
+        else
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            ESP_LOGI(QUEUE_TAG, "waiting...");
+            continue;
+        }
+    }
+}
+
 #endif

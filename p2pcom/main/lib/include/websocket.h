@@ -17,5 +17,7 @@ httpd_handle_t start_websocket(void);
 
 esp_err_t stop_websocket(httpd_handle_t server);
 
+void ws_task(void *pvParameters);
+
 
 #endif

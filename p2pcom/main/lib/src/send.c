@@ -18,12 +18,6 @@ data_stream_t * prepare_data_stream(e_actions_t action)
     ESP_LOGI(SEND_TAG, "Datastream copy succ: [" MACSTR "]", MAC2STR(stream->dest));
     stream->ttl=MAX_TTL;
 
-    if (action!=RESPONSE)
-    {
-        stream->engine = NULL;
-    }
-
-
     stream->sent=time(&raw_time);
     stream->crc = 0;
 

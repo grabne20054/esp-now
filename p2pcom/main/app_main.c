@@ -15,6 +15,8 @@
 
 #include "../include/globals.h"
 
+#include "../include/engine.h"
+
 #include "esp_log.h"
 #include "esp_system.h"
 
@@ -30,16 +32,11 @@
 
 #include "lib/include/init_wifi.h"
 
-#include "lib/include/engine.h"
-
 #include "lib/include/helpers.h"
 
 #include "lib/include/websocket.h"
 
 #include "lib/include/data_queue.h"
-
-// 0a 64 is ws, 4a 6c is fieldside
-
 
 // You can modify these according to your boards.
 #define UART_BAUD_RATE 115200
@@ -48,7 +45,7 @@
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
 #define SSID "Grabner_2.4GHz_Buero"
-#define PASS "erDWue8crs"
+#define PASS "xx"
 
 static const char *TAG = "app_main";
 
@@ -58,19 +55,18 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
     ESP_LOGI(TAG, "Send callback called, dest=" MACSTR ", src=" MACSTR ", status=%s",
              MAC2STR(tx_info->des_addr), MAC2STR(tx_info->src_addr), esp_err_to_name(status));
     #if SWITCH == 1
-    if (status == ESP_NOW_SEND_SUCCESS)
-    {
-        ESP_LOGI(TAG, "Peer acknowledged the data successfully");
-        xEventGroupSetBits(channel_hopping, BIT0);
+        if (status == ESP_NOW_SEND_SUCCESS)
+        {
+            ESP_LOGI(TAG, "Peer acknowledged the data successfully");
+            xEventGroupSetBits(channel_hopping, BIT0);
 
-    }
-    else
-    {
-        ESP_LOGE(TAG, "Peer did not acknowledge the data");
-        xEventGroupSetBits(channel_hopping, BIT1);
-    }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Peer did not acknowledge the data");
+            xEventGroupSetBits(channel_hopping, BIT1);
+        }
     #endif
-
 
     if (status == ESP_OK) {
         ESP_LOGI(TAG, "Data sent successfully");
@@ -93,45 +89,57 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
     data_payload->crc = 0;
 
-    ESP_LOGI(TAG, "global seq: %d", global_seq);
-    ESP_LOGI(TAG, "local seq: %d", data_payload->seq);
+    global_seq = data_payload->seq;
 
-    if ((data_payload->seq != global_seq) && (waiting_for_recv))
+    // current time
+    time_t current_time = time(NULL);
+
+    ESP_LOGI(TAG, "sizeof(data_stream_t) = %u", sizeof(data_stream_t));
+    ESP_LOGI(TAG, "sizeof(time_t) = %u", sizeof(time_t));
+    ESP_LOGI(TAG, "sizeof(e_actions_t) = %u", sizeof(e_actions_t));
+    ESP_LOGI(TAG, "crc = %u", response_crc);
+
+    #if SWITCH == 0
+    if (data_payload->action == HOPPING)
     {
-        ESP_LOGI(TAG, "right package recv");
-        waiting_for_recv=false;
-
-        if (response_crc != crc32(data_payload, sizeof(*data_payload)))
-        {
-            
-            ESP_LOGI(TAG, "Success CRC are correct");
-
-            queue_t * unq_queue = get_unq_queue();
-
-            // ready to perform desired action
-            bool recvadd = add_to_queue(data_payload, unq_queue);
-            if (recvadd)
-            {
-                ESP_LOGI(TAG, "Data added to queue successfully");
-            }
-            else
-            {
-                ESP_LOGE(TAG, "Failed to add data to queue");
-            }
-            free(data_payload);
-        }
-        else {
-            ESP_LOGE(TAG, "Error CRC");
-        }
-
+        ESP_LOGI(TAG, "Received HOPPING command, performing channel hopping");
+        free(data_payload);
+        return;
     }
-    else 
+    #endif
+    
+
+    if (response_crc == crc32(data_payload, sizeof(*data_payload)) && (current_time - data_payload->sent) <= MAX_TTL && global_seq == data_payload->seq)
     {
-        ESP_LOGI(TAG, "package not looking for drop it");
-        //free(payload);
+        ESP_LOGI(TAG, "Success CRC are correct");
+
+        queue_t * unq_queue = get_unq_queue();
+
+        bool recvadd = add_to_queue(data_payload, unq_queue);
+        if (recvadd)
+        {
+            ESP_LOGI(TAG, "Data added to queue successfully");
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to add data to queue");
+
+            data_stream_t response = {0};
+            memcpy(&response, data_payload, sizeof(*data_payload));
+
+            response.action = RESPONSE;
+            response.sent = time(NULL);
+
+            response.crc = crc32(&response, sizeof(response));
+
+            transmit(response);
+        }
         free(data_payload);
     }
-
+    else {
+        ESP_LOGE(TAG, "Error CRC, TTL, or sequence number mismatch");
+        free(data_payload);
+    }
 }
 
 void app_main()
@@ -169,8 +177,8 @@ void app_main()
     ESP_ERROR_CHECK( esp_now_init());
 
     // setup tcpip stack if on ws side
-    if (SWITCH == 0)
-    {
+    #if SWITCH == 0
+    
 
         wifi_config_t cfg = {
         .sta = {
@@ -185,7 +193,8 @@ void app_main()
             ESP_LOGE(TAG, "Failed to set up TCP/IP stack");
             return;
         }
-    }
+    
+    #endif
 
     uint8_t primary;
     wifi_second_chan_t second;
@@ -199,6 +208,8 @@ void app_main()
     #endif
     peer.encrypt = false;
     peer.ifidx = WIFI_IF_STA;
+
+    ESP_LOGI(TAG, "WIFI channel: %d, peer channel: %d", primary, peer.channel);
 
     esp_err_t res = esp_now_add_peer(&peer);
 
@@ -229,20 +240,59 @@ void app_main()
     esp_now_register_send_cb(app_send_cb_handle);
     esp_now_register_recv_cb(app_recv_cb_handle);
 
-   
+    // QUEUE + WS
+    TaskHandle_t queue_handle = NULL;
 
-    if (SWITCH == 0)
-    {   
-        httpd_handle_t server = start_websocket();
-    }
+    BaseType_t queue_task_handle = xTaskCreatePinnedToCore(
+        do_queue,
+        "queue_task",
+        4096,
+        NULL,
+        1,
+        &queue_handle,
+        0
+    );
+
     #if SWITCH == 1
-    else if (SWITCH == 1)
+
+    TaskHandle_t engine_handle = NULL;
+
+    BaseType_t engine_task_handle = xTaskCreatePinnedToCore(
+        check_engine,
+        "engine_task",
+        4096,
+        NULL,
+        1,
+        &engine_handle,
+        1
+    );
+
+    if (queue_task_handle == pdPASS)
     {
-        //ledc init for motor control
-        pwm_init();
+        ESP_LOGI(TAG, "TASK QUEUE SPAWNED SUCCESSFULLY");
+    }
+    else
+    {
+        return;
+    }
 
-        // main loop for field side
+    #endif
 
+    #if SWITCH == 0
+
+    BaseType_t websocket_task_handle = xTaskCreatePinnedToCore(
+        ws_task,
+        "websocket_task",
+        4096,
+        NULL,
+        1,
+        NULL,
+        1
+    );
+
+    #endif
+
+    #if SWITCH == 1
         // perform channel hopping if on field side
         if (!hopping_channel())
         {
@@ -250,61 +300,27 @@ void app_main()
             return;
         }
 
+        waiting_for_recv = false;
+        global_seq = 0;
 
         queue_t * queue = get_unq_queue();
 
-        while (1)
+        // send test command to peer to check if it is reachable
+
+        e_actions_t test_action = REQUEST;
+
+        if (add_action_to_queue(test_action, queue))
         {
-            if (!is_empty(queue))
-            {
-                data_stream_t stream = dequeue(queue);
-
-                ESP_LOGI(TAG, "Processing command: %d", stream.command);
-
-                switch (stream.command)
-                {
-                case OPEN:
-                    motor_forward(512);
-                    break;
-
-                case CLOSE:
-                    motor_backward(512);
-                    break;
-                case GETSTATUS:
-                    break;
-                case GETPOSITION:
-                    break;
-
-                case RESPONSE:
-                    break;
-                
-
-                }
-
-                e_actions_t action = 4;
-
-                data_stream_t * resstream = prepare_data_stream(action);
-
-                // locking!!
-
-                ESP_ERROR_CHECK(transmit(resstream));
-
-
-            }
-            else
-            {
-                vTaskDelay(pdMS_TO_TICKS(1000));
-                ESP_LOGI(TAG, "waiting...");
-                continue;
-
-            }
-            
+            ESP_LOGI(TAG, "Test command added to queue successfully");
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to add test command to queue");
         }
     
-    
-    }
     #endif
-
 }
+    
 
 #endif
+

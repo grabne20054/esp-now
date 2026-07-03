@@ -7,24 +7,27 @@ data_stream_t * prepare_data_stream(e_actions_t action)
 {
     uint8_t dest_mac[6] = PEER_MAC_ADDR;
     time_t raw_time;
-    data_stream_t * stream = malloc(sizeof(data_stream_t));
+    data_stream_t * stream = calloc(1, sizeof(data_stream_t));
     if (stream == NULL) {
-        ESP_LOGE(SEND_TAG, "malloc failed");
+        ESP_LOGE(SEND_TAG, "calloc failed");
         return NULL;
     }
 
+    stream->seq=0;
     stream->command=action;
+    stream->action=REQUEST;
     memcpy(stream->dest, dest_mac, 6);
-    ESP_LOGI(SEND_TAG, "Datastream copy succ: [" MACSTR "]", MAC2STR(stream->dest));
     stream->ttl=MAX_TTL;
 
     stream->sent=time(&raw_time);
     stream->crc = 0;
 
-    uint32_t crc = crc32(stream, (sizeof(*stream)));
-    stream->crc = crc;
-
     ESP_LOGI(SEND_TAG, "prepare data succ");
+    ESP_LOGI(SEND_TAG, "sizeof(data_stream_t) = %u", sizeof(data_stream_t));
+    ESP_LOGI(SEND_TAG, "sizeof(time_t) = %u", sizeof(time_t));
+    ESP_LOGI(SEND_TAG, "sizeof(e_actions_t) = %u", sizeof(e_actions_t));
+    ESP_LOGI(SEND_TAG, "crc = %u", stream->crc);
+
 
     return stream;
 
@@ -105,19 +108,17 @@ bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
 
 }
 
-esp_err_t transmit(data_stream_t *stream)
+esp_err_t transmit(data_stream_t stream)
 {
-    if (stream == NULL) {
-        ESP_LOGE(SEND_TAG, "transmit: stream is NULL");
-        return ESP_ERR_INVALID_ARG;
-    }
-
     global_seq++;
 
-    stream->seq = global_seq;
-    ESP_LOGI(SEND_TAG, "Peer added successfully: [" MACSTR "]", MAC2STR(stream->dest));
-    
-    esp_err_t res = esp_now_send(stream->dest, (uint8_t*)stream, sizeof(*stream));
+    stream.seq = global_seq;
+
+    uint32_t crc = crc32(&stream, (sizeof(stream)));
+    stream.crc = crc;
+    ESP_LOGI(SEND_TAG, "Peer added successfully: [" MACSTR "]", MAC2STR(stream.dest));
+
+    esp_err_t res = esp_now_send(stream.dest, (uint8_t*)&stream, sizeof(stream));
     
     waiting_for_recv=true;
 

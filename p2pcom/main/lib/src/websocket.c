@@ -30,16 +30,80 @@ httpd_handle_t start_websocket(void)
     return NULL;
 }
 
-static void send_response(httpd_req_t *req)
+static void send_response(httpd_req_t *req, char *resp)
 {
-    const char * resp = "echo";
+    ESP_LOGI(WEBSOCKETTAG, "Error send res");
     httpd_resp_send(req, resp, sizeof(resp) );
 }
 
 
 esp_err_t echo_handler(httpd_req_t *req)
 {
+    bool err = false;
     ESP_LOGI(WEBSOCKETTAG, "Websocket Handler called with uri: %s", req->uri);
+
+    const char *subpath = req->uri + strlen("/ws");
+
+    if (*subpath == '/')
+    {    
+        subpath++;
+    }
+
+    e_actions_t * action = malloc(sizeof(e_actions_t));
+
+    ESP_LOGI(WEBSOCKETTAG, "subpath[1]: %s\n", subpath);
+
+    
+    switch (*subpath)
+    {
+    case 'o':
+        if (!check_subpath(subpath, "o")) {
+            char * res = "Err";
+            send_response(req, res);
+            err = true;
+            break;
+        }
+        *action = OPEN;
+        break;
+    case 'c':
+        if (!check_subpath(subpath, "c")) {
+            char * res = "Err";
+            send_response(req, res);
+            err = true;
+            break;
+        }
+        *action = CLOSE;
+        break;
+    case 's':
+        if (!check_subpath(subpath, "s")) {
+            char * res = "Err";
+            send_response(req, res);
+            err = true;
+            break;
+        }
+        *action = GETSTATUS;
+        break;
+    case 'p':
+        if (!check_subpath(subpath, "p")) {
+            char * res = "Err";
+            send_response(req, res);
+            err = true;
+            break;
+        }
+        *action = GETPOSITION;
+        break;
+    default:
+        char * res = "Err";
+        send_response(req, res);
+        err = true;
+        break;
+    }
+
+    if (err)
+    {
+        return ESP_FAIL;
+    }
+    
     queue_t * unq_queue = get_unq_queue();
     if (unq_queue == NULL)
     {
@@ -48,21 +112,7 @@ esp_err_t echo_handler(httpd_req_t *req)
     
     ESP_LOGI(WEBSOCKETTAG, "Got Request");
 
-    //e_actions_t action;
-
-    char action = 'o'; // to do choose action based on ws conn
-
-    switch (action)
-    {
-    case 'o':
-        action=0;
-        break;
-    
-    default:
-        break;
-    }
-
-    bool add_succ = add_to_queue(action, unq_queue);
+    bool add_succ = add_to_queue(*action, unq_queue);
     ESP_LOGI(WEBSOCKETTAG, "Adding Queue: %d", add_succ);
 
     if (add_succ)
@@ -94,6 +144,11 @@ void ws_task(void *pvParameters)
     }
 
     vTaskDelete(NULL);
+}
+
+bool check_subpath(const char *subpath, const char *expected)
+{
+    return strcmp(subpath, expected) == 0;
 }
 
 #endif

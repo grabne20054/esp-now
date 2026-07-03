@@ -4,7 +4,7 @@
 #include "globals.h"
 
 #if SWITCH == 1
-EventGroupHandle_t channel_hopping;
+EventGroupHandle_t channel_hopping = NULL;
 #endif
 
 #endif // GLOBALS_C

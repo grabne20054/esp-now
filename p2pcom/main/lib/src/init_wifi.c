@@ -64,6 +64,7 @@ esp_err_t get_mac(uint8_t mac[6])
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
 {
+
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -73,7 +74,6 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             ESP_LOGI(TAG_WIFI, "retry to connect to the AP");
         } else {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-            ESP_LOGI(TAG_WIFI,"assuming node is in field side continue" );
         }
         ESP_LOGI(TAG_WIFI,"connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
@@ -162,14 +162,14 @@ bool hopping_channel()
 
         // send a test frame to check if the peer is on this channel
         data_stream_t *test_stream = prepare_data_stream(0); // action 0 for testing
-        
-        transmit(test_stream);
+
+        test_stream->action = HOPPING;
+        transmit(*test_stream);
 
         EventBits_t bits = xEventGroupWaitBits(channel_hopping, BIT0 | BIT1, pdFALSE, pdFALSE, portMAX_DELAY);
 
 
         ESP_LOGI(TAG_WIFI, "Checking if peer is found on channel %d", channel);
-        ESP_LOGI(TAG_WIFI, "peer_found: %d", peer_found);
 
         if (bits & BIT0 && !(bits & BIT1))
         {

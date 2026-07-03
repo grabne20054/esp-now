@@ -14,7 +14,7 @@
 #include "esp_mac.h"
 #endif
 
-#define SWITCH 1 // 0=ws side   1=field side
+#define SWITCH 0 // 0=ws side   1=field side
 
 #define PEER_MAC_ADDR_WS {0xd4, 0xe9, 0xf4, 0xfb, 0x4a, 0x6c} // peer addr not own mac
 #define PEER_MAC_ADDR_FIELD {0xd4, 0xe9, 0xf4, 0xfb, 0x0a, 0x64} // peer addr not own mac
@@ -39,7 +39,7 @@ data_stream_t * prepare_data_stream(e_actions_t action);
 bool add_action_to_queue(e_actions_t action, queue_t * unq_queue);
 bool add_data_stream_to_queue(data_stream_t * stream, queue_t * unq_queue);
 
-esp_err_t transmit(data_stream_t *stream);
+esp_err_t transmit(data_stream_t stream);
 
 
 #endif

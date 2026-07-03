@@ -2,6 +2,7 @@
 #define QUEUE_C
 
 #include "../include/data_queue.h"
+#include "../include/send.h"
 #include <stdio.h>
 
 queue_t * create(int max_size)
@@ -119,17 +120,56 @@ bool test_queue()
 
 void do_queue(void *pvParameters)
 {
+    waiting_for_recv = false;
+    global_seq = 0;
+
     queue_t * queue = get_unq_queue();
 
     while (1)
     {
         if (!is_empty(queue))
         {
+            //pthread_mutex_lock(&queue->mutex);
+
             data_stream_t stream = dequeue(queue);
 
             ESP_LOGI(QUEUE_TAG, "Processing command: %d", stream.command);
 
-            // Process the command here
+            if (stream.action == RESPONSE)
+            {
+                ESP_LOGI(QUEUE_TAG, "Processing response for seq: %d", stream.seq);
+                if (stream.seq == global_seq)
+                {
+                    ESP_LOGI(QUEUE_TAG, "Response matches global_seq: %d", global_seq);
+                    waiting_for_recv = false;
+                }
+                else
+                {
+                    ESP_LOGW(QUEUE_TAG, "Response seq: %d does not match global_seq: %d", stream.seq, global_seq);
+                }
+            }
+            
+            #if SWITCH == 0
+            if (stream.action == REQUEST)
+            {
+                transmit(stream);
+            }
+            #endif
+
+
+            #if SWITCH == 1
+
+                if (stream.action == REQUEST)
+                {
+                    engine_t *engine = get_unq_engine();
+
+                    perform_engine_action(engine, stream.command);
+
+                }
+            #endif
+
+            //pthread_mutex_unlock(&queue->mutex);
+            
         }
         else
         {

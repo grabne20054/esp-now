@@ -36,6 +36,8 @@ esp_err_t get_mac(uint8_t mac[6]);
 
 bool set_up_tcpip_stack(wifi_config_t conf);
 
+static void set_channel(uint8_t channel);
+
 #if SWITCH == 1
 bool hopping_channel(void);
 #endif

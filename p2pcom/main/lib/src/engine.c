@@ -139,6 +139,30 @@ e_status_t perform_engine_action(engine_t *engine, e_actions_t action)
             return ERROR;
     }
 
+    // assuming action has been performed 
+    vTaskDelay(pdMS_TO_TICKS(2000)); // simulate time taken to perform action
+    ESP_LOGI(TAG_ENGINE, "Action %d performed successfully", action);
+
+    engine->status = READY;
+
+    data_stream_t *stream = prepare_data_stream(action, RESPONSE);
+    if (stream == NULL)
+    {
+        ESP_LOGE(TAG_ENGINE, "Failed to prepare data stream for response");
+        return ERROR;
+    } 
+
+    if (add_data_stream_to_queue(stream, get_unq_queue()))
+    {
+        ESP_LOGI(TAG_ENGINE, "Response added to queue successfully");
+    }
+    else
+    {
+        ESP_LOGE(TAG_ENGINE, "Failed to add response to queue");
+        free(stream);
+        return ERROR;
+    }
+    
     //pthread_mutex_unlock(&engine->mutex);
 
     return READY;

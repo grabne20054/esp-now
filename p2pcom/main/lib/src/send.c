@@ -3,7 +3,7 @@
 
 #include "../include/send.h"
 
-data_stream_t * prepare_data_stream(e_actions_t action)
+data_stream_t * prepare_data_stream(e_actions_t command, ds_actions_t action)
 {
     uint8_t dest_mac[6] = PEER_MAC_ADDR;
     time_t raw_time;
@@ -14,8 +14,8 @@ data_stream_t * prepare_data_stream(e_actions_t action)
     }
 
     stream->seq=0;
-    stream->command=action;
-    stream->action=REQUEST;
+    stream->command=command;
+    stream->action=action;
     memcpy(stream->dest, dest_mac, 6);
     stream->ttl=MAX_TTL;
 
@@ -34,10 +34,10 @@ data_stream_t * prepare_data_stream(e_actions_t action)
 }
 
 
-bool add_action_to_queue(e_actions_t action, queue_t *unq_queue)
+bool add_action_to_queue(e_actions_t command, ds_actions_t action, queue_t *unq_queue)
 {
 
-    data_stream_t * stream = prepare_data_stream(action);
+    data_stream_t * stream = prepare_data_stream(command, action);
     if (stream == NULL) {
         ESP_LOGE(SEND_TAG, "prepare_data_stream failed");
         return false;
@@ -110,8 +110,11 @@ bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
 
 esp_err_t transmit(data_stream_t stream)
 {
-    global_seq++;
-
+    if (stream.action != HOPPING)
+    {
+        global_seq++;
+    }
+    
     stream.seq = global_seq;
 
     uint32_t crc = crc32(&stream, (sizeof(stream)));

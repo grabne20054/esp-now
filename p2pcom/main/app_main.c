@@ -44,8 +44,8 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "Grabner_2.4GHz_Buero"
-#define PASS "xx"
+#define SSID "gramesch"
+#define PASS "gramesch!?"
 
 static const char *TAG = "app_main";
 
@@ -89,7 +89,7 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
     data_payload->crc = 0;
 
-    global_seq = data_payload->seq;
+    //global_seq = data_payload->seq;
 
     // current time
     time_t current_time = time(NULL);
@@ -98,6 +98,8 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     ESP_LOGI(TAG, "sizeof(time_t) = %u", sizeof(time_t));
     ESP_LOGI(TAG, "sizeof(e_actions_t) = %u", sizeof(e_actions_t));
     ESP_LOGI(TAG, "crc = %u", response_crc);
+
+    ESP_LOGI(TAG, "global seq: %d, data_payload seq: %d", global_seq, data_payload->seq);
 
     #if SWITCH == 0
     if (data_payload->action == HOPPING)
@@ -109,13 +111,13 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     #endif
     
 
-    if (response_crc == crc32(data_payload, sizeof(*data_payload)) && (current_time - data_payload->sent) <= MAX_TTL && global_seq == data_payload->seq)
+    if (response_crc == crc32(data_payload, sizeof(*data_payload)) && (current_time - data_payload->sent) <= MAX_TTL)
     {
         ESP_LOGI(TAG, "Success CRC are correct");
 
         queue_t * unq_queue = get_unq_queue();
 
-        bool recvadd = add_to_queue(data_payload, unq_queue);
+        bool recvadd = add_data_stream_to_queue(data_payload, unq_queue);
         if (recvadd)
         {
             ESP_LOGI(TAG, "Data added to queue successfully");
@@ -124,26 +126,37 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
         {
             ESP_LOGE(TAG, "Failed to add data to queue");
 
-            data_stream_t response = {0};
-            memcpy(&response, data_payload, sizeof(*data_payload));
+            data_stream_t *response = prepare_data_stream(data_payload->command, RESPONSE);
+            if (response == NULL)
+            {
+                ESP_LOGE(TAG, "Failed to prepare response data stream");
+                return;
+            }
 
-            response.action = RESPONSE;
-            response.sent = time(NULL);
-
-            response.crc = crc32(&response, sizeof(response));
-
-            transmit(response);
+            if (add_data_stream_to_queue(response, unq_queue))
+            {
+                ESP_LOGI(TAG, "Response added to queue successfully");
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Failed to add response to queue");
+                free(response);
+                return;
+            }
         }
         free(data_payload);
     }
     else {
-        ESP_LOGE(TAG, "Error CRC, TTL, or sequence number mismatch");
+        ESP_LOGE(TAG, "Error CRC, TTL mismatch");
         free(data_payload);
     }
 }
 
 void app_main()
 {
+
+    waiting_for_recv = false;
+    global_seq = 0;
 
     #if SWITCH == 1
     channel_hopping = xEventGroupCreate();
@@ -300,16 +313,11 @@ void app_main()
             return;
         }
 
-        waiting_for_recv = false;
-        global_seq = 0;
-
         queue_t * queue = get_unq_queue();
 
         // send test command to peer to check if it is reachable
 
-        e_actions_t test_action = REQUEST;
-
-        if (add_action_to_queue(test_action, queue))
+        if (add_action_to_queue(OPEN, HOPPING, queue))
         {
             ESP_LOGI(TAG, "Test command added to queue successfully");
         }

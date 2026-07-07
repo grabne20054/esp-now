@@ -112,7 +112,7 @@ esp_err_t echo_handler(httpd_req_t *req)
     
     ESP_LOGI(WEBSOCKETTAG, "Got Request");
 
-    bool add_succ = add_to_queue(*action, unq_queue);
+    bool add_succ = add_action_to_queue(*action, REQUEST,unq_queue);
     ESP_LOGI(WEBSOCKETTAG, "Adding Queue: %d", add_succ);
 
     if (add_succ)

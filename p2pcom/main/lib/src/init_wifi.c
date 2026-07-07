@@ -161,7 +161,7 @@ bool hopping_channel()
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait for a while on the new channel
 
         // send a test frame to check if the peer is on this channel
-        data_stream_t *test_stream = prepare_data_stream(0); // action 0 for testing
+        data_stream_t *test_stream = prepare_data_stream(0, HOPPING); // action 0 for testing
 
         test_stream->action = HOPPING;
         transmit(*test_stream);

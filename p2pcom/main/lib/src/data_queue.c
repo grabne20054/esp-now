@@ -120,9 +120,6 @@ bool test_queue()
 
 void do_queue(void *pvParameters)
 {
-    waiting_for_recv = false;
-    global_seq = 0;
-
     queue_t * queue = get_unq_queue();
 
     while (1)
@@ -142,10 +139,13 @@ void do_queue(void *pvParameters)
                 {
                     ESP_LOGI(QUEUE_TAG, "Response matches global_seq: %d", global_seq);
                     waiting_for_recv = false;
+                    transmit(stream);
                 }
                 else
                 {
                     ESP_LOGW(QUEUE_TAG, "Response seq: %d does not match global_seq: %d", stream.seq, global_seq);
+                    waiting_for_recv = false;
+                    transmit(stream);
                 }
             }
             

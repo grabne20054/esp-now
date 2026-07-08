@@ -135,18 +135,9 @@ void do_queue(void *pvParameters)
             if (stream.action == RESPONSE)
             {
                 ESP_LOGI(QUEUE_TAG, "Processing response for seq: %d", stream.seq);
-                if (stream.seq == global_seq)
-                {
-                    ESP_LOGI(QUEUE_TAG, "Response matches global_seq: %d", global_seq);
-                    waiting_for_recv = false;
-                    transmit(stream);
-                }
-                else
-                {
-                    ESP_LOGW(QUEUE_TAG, "Response seq: %d does not match global_seq: %d", stream.seq, global_seq);
-                    waiting_for_recv = false;
-                    transmit(stream);
-                }
+                
+                waiting_for_recv = false;
+                transmit(stream);
             }
             
             #if SWITCH == 0
@@ -175,6 +166,7 @@ void do_queue(void *pvParameters)
         {
             vTaskDelay(pdMS_TO_TICKS(1000));
             ESP_LOGI(QUEUE_TAG, "waiting...");
+            ESP_LOGI(QUEUE_TAG, "global seq: %d", global_seq);
             continue;
         }
     }

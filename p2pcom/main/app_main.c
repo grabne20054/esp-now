@@ -12,7 +12,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-
 #include "../include/globals.h"
 
 #include "../include/engine.h"
@@ -89,7 +88,7 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
     data_payload->crc = 0;
 
-    //global_seq = data_payload->seq;
+    global_seq = get_max_clock_value(global_seq, data_payload->seq) + 1;
 
     // current time
     time_t current_time = time(NULL);
@@ -99,8 +98,6 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     ESP_LOGI(TAG, "sizeof(e_actions_t) = %u", sizeof(e_actions_t));
     ESP_LOGI(TAG, "crc = %u", response_crc);
 
-    ESP_LOGI(TAG, "global seq: %d, data_payload seq: %d", global_seq, data_payload->seq);
-
     #if SWITCH == 0
     if (data_payload->action == HOPPING)
     {
@@ -108,46 +105,71 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
         free(data_payload);
         return;
     }
+    else if (data_payload->action == REQUEST)
+    {
+       ESP_LOGE(TAG, "Received REQUEST PROBABLY TRASH NOT IMPLEMENTED YET");
+       free(data_payload);
+       return;
+    }
+    else if (waiting_for_recv && data_payload->action == RESPONSE)
+    {
+        ESP_LOGI(TAG, "Received RESPONSE, setting waiting_for_recv to false");
+        waiting_for_recv = false;
+
+    }
+    
+    #endif
+
+    #if SWITCH == 1
+    if (data_payload->action == RESPONSE)
+    {
+        ESP_LOGE(TAG, "Received REQUEST PROBABLY TRASH NOT IMPLEMENTED YET");
+        free(data_payload);
+        return;
+    }
     #endif
     
 
-    if (response_crc == crc32(data_payload, sizeof(*data_payload)) && (current_time - data_payload->sent) <= MAX_TTL)
+    if ((current_time - data_payload->sent) <= MAX_TTL)
     {
-        ESP_LOGI(TAG, "Success CRC are correct");
+        ESP_LOGI(TAG, "TTL VALID");
 
-        queue_t * unq_queue = get_unq_queue();
-
-        bool recvadd = add_data_stream_to_queue(data_payload, unq_queue);
-        if (recvadd)
+        if (response_crc == crc32(data_payload, sizeof(*data_payload)))
         {
-            ESP_LOGI(TAG, "Data added to queue successfully");
-        }
-        else
-        {
-            ESP_LOGE(TAG, "Failed to add data to queue");
+            ESP_LOGI(TAG, "CRC VALID");
 
-            data_stream_t *response = prepare_data_stream(data_payload->command, RESPONSE);
-            if (response == NULL)
+            if (data_payload->action == RESPONSE)
             {
-                ESP_LOGE(TAG, "Failed to prepare response data stream");
+                ESP_LOGI(TAG, "Received RESPONSE, writing to websocket");
+                // write to websocket
+
+                free(data_payload);
                 return;
             }
 
-            if (add_data_stream_to_queue(response, unq_queue))
+            queue_t * unq_queue = get_unq_queue();
+
+            bool recvadd = add_data_stream_to_queue(data_payload, unq_queue);
+            if (recvadd)
             {
-                ESP_LOGI(TAG, "Response added to queue successfully");
+                ESP_LOGI(TAG, "Data added to queue successfully");
             }
             else
             {
-                ESP_LOGE(TAG, "Failed to add response to queue");
-                free(response);
-                return;
+                ESP_LOGE(TAG, "Failed to add data to queue");
             }
+            free(data_payload);
         }
-        free(data_payload);
+        else
+        {
+            ESP_LOGE(TAG, "CRC INVALID");
+            free(data_payload);
+            return;
+        }
+        
     }
     else {
-        ESP_LOGE(TAG, "Error CRC, TTL mismatch");
+        ESP_LOGE(TAG, "PACKET DEAD");
         free(data_payload);
     }
 }

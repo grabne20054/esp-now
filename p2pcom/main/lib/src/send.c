@@ -110,20 +110,16 @@ bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
 
 esp_err_t transmit(data_stream_t stream)
 {
-    if (stream.action != HOPPING)
-    {
-        global_seq++;
-    }
-    
-    stream.seq = global_seq;
-
     uint32_t crc = crc32(&stream, (sizeof(stream)));
     stream.crc = crc;
     ESP_LOGI(SEND_TAG, "Peer added successfully: [" MACSTR "]", MAC2STR(stream.dest));
 
     esp_err_t res = esp_now_send(stream.dest, (uint8_t*)&stream, sizeof(stream));
     
-    waiting_for_recv=true;
+    if (stream.action == REQUEST)
+    {
+        waiting_for_recv = false;
+    }
 
     return res;
 }

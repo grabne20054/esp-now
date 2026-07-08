@@ -71,10 +71,16 @@ engine_t * init_engine()
     engine->position = 0;
     engine->status = READY;
 
-    //pthread_mutex_init(engine->mutex, NULL);
+    if (pthread_mutex_init(&engine->mutex, NULL) != 0)
+    {
+        ESP_LOGE(TAG_ENGINE, "Mutex init failed");
+        free(engine);
+        return NULL;
+    }
 
     return engine;
 }
+
 
 engine_t * get_unq_engine()
 {
@@ -122,7 +128,7 @@ void engine_stop(void)
 e_status_t perform_engine_action(engine_t *engine, e_actions_t action)
 {
 
-    //pthread_mutex_lock(&engine->mutex);
+    pthread_mutex_lock(&engine->mutex);
     engine->status = BUSY;
 
     switch (action)
@@ -162,8 +168,8 @@ e_status_t perform_engine_action(engine_t *engine, e_actions_t action)
         free(stream);
         return ERROR;
     }
-    
-    //pthread_mutex_unlock(&engine->mutex);
+
+    pthread_mutex_unlock(&engine->mutex);
 
     return READY;
 }

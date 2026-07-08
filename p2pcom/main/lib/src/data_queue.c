@@ -19,19 +19,23 @@ queue_t * create(int max_size)
     instance->rear = instance->max_size - 1;
     instance->data_stream_array = malloc(max_size * sizeof(data_stream_t));
     
-    pthread_mutex_init(&instance->mutex, NULL);
+    if (pthread_mutex_init(&instance->mutex, NULL) != 0)
+    {
+        ESP_LOGE(QUEUE_TAG, "Mutex init failed");
+        free(instance->data_stream_array);
+        free(instance);
+        return NULL;
+    }
 
     return instance;
 
 }
 
-
 bool enqueue(queue_t *instance, data_stream_t * data_stream)
 {
-    if (instance == NULL || data_stream == NULL)
-        return false;
+    pthread_mutex_lock(&instance->mutex);
 
-    if (pthread_mutex_trylock(&instance->mutex) != 0)
+    if (instance == NULL || data_stream == NULL)
         return false;
 
     bool success = false;
@@ -47,6 +51,11 @@ bool enqueue(queue_t *instance, data_stream_t * data_stream)
         ESP_LOGI(QUEUE_TAG, "enqueue succ");
         success = true;
     }
+    else
+    {
+        ESP_LOGE(QUEUE_TAG, "Queue is full, cannot enqueue");
+        success = false;
+    }
 
     pthread_mutex_unlock(&instance->mutex);
 
@@ -60,12 +69,16 @@ bool is_empty(queue_t * instance)
 
 data_stream_t dequeue(queue_t * instance)
 {
+    pthread_mutex_lock(&instance->mutex);
+
     data_stream_t data_stream = instance->data_stream_array[instance->front];
 
     instance->front = (instance->front + 1) % instance->max_size;
     instance->current_size--;
+
+    pthread_mutex_unlock(&instance->mutex);
+
     return data_stream;
-    
 }
 
 void destroy(queue_t * instance)
@@ -126,7 +139,6 @@ void do_queue(void *pvParameters)
     {
         if (!is_empty(queue))
         {
-            //pthread_mutex_lock(&queue->mutex);
 
             data_stream_t stream = dequeue(queue);
 
@@ -137,13 +149,13 @@ void do_queue(void *pvParameters)
                 ESP_LOGI(QUEUE_TAG, "Processing response for seq: %d", stream.seq);
                 
                 waiting_for_recv = false;
-                transmit(stream);
+                ESP_ERROR_CHECK(transmit(stream));
             }
             
             #if SWITCH == 0
             if (stream.action == REQUEST)
             {
-                transmit(stream);
+                ESP_ERROR_CHECK(transmit(stream));
             }
             #endif
 
@@ -158,14 +170,12 @@ void do_queue(void *pvParameters)
 
                 }
             #endif
-
-            //pthread_mutex_unlock(&queue->mutex);
             
         }
         else
         {
             vTaskDelay(pdMS_TO_TICKS(1000));
-            ESP_LOGI(QUEUE_TAG, "waiting...");
+            ESP_LOGI(QUEUE_TAG, "current queue size: %d", queue->current_size);
             ESP_LOGI(QUEUE_TAG, "global seq: %d", global_seq);
             continue;
         }

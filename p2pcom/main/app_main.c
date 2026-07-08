@@ -334,19 +334,6 @@ void app_main()
             ESP_LOGI(TAG, "Failed to find peer during channel hopping, continuing with last known good channel");
             return;
         }
-
-        queue_t * queue = get_unq_queue();
-
-        // send test command to peer to check if it is reachable
-
-        if (add_action_to_queue(OPEN, HOPPING, queue))
-        {
-            ESP_LOGI(TAG, "Test command added to queue successfully");
-        }
-        else
-        {
-            ESP_LOGE(TAG, "Failed to add test command to queue");
-        }
     
     #endif
 }

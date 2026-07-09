@@ -5,8 +5,6 @@
 
 static const char *TAG_ENGINE = "ENGINE";
 
-//EventGroupHandle_t engine_event_group = NULL;
-
 void pwm_init(void)
 {
     gpio_config_t en_conf = {
@@ -59,8 +57,6 @@ void pwm_init(void)
 
 engine_t * init_engine()
 {
-    //engine_event_group = xEventGroupCreate();
-
     engine_t *engine = malloc(sizeof(engine_t));
     if (engine == NULL)
     {
@@ -139,7 +135,6 @@ e_status_t perform_engine_action(engine_t *engine, e_actions_t action)
         case CLOSE:
             engine_backward(1023);
             break;
-        // TO DO GET POS,  STATUS
         default:
             ESP_LOGE(TAG_ENGINE, "Unknown action: %d", action);
             return ERROR;

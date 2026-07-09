@@ -110,16 +110,12 @@ bool set_up_tcpip_stack(wifi_config_t config)
 
     ESP_LOGI(TAG_WIFI, "wifi_init_sta finished.");
 
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
             pdFALSE,
             pdFALSE,
             portMAX_DELAY);
 
-    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-     * happened. */
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG_WIFI, "connected to ap SSID:%s password:%s",
                  config.sta.ssid, config.sta.password);

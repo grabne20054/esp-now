@@ -52,11 +52,4 @@ uint32_t get_max_clock_value(uint32_t current_value, uint32_t new_value)
     }
 }
 
-
-/*
-
-ESP NOW Callbacks
-*/
-
-
 #endif

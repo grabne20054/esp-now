@@ -22,13 +22,6 @@ data_stream_t * prepare_data_stream(e_actions_t command, ds_actions_t action)
     stream->sent=time(&raw_time);
     stream->crc = 0;
 
-    ESP_LOGI(SEND_TAG, "prepare data succ");
-    ESP_LOGI(SEND_TAG, "sizeof(data_stream_t) = %u", sizeof(data_stream_t));
-    ESP_LOGI(SEND_TAG, "sizeof(time_t) = %u", sizeof(time_t));
-    ESP_LOGI(SEND_TAG, "sizeof(e_actions_t) = %u", sizeof(e_actions_t));
-    ESP_LOGI(SEND_TAG, "crc = %u", stream->crc);
-
-
     return stream;
 
 }
@@ -67,7 +60,6 @@ bool add_action_to_queue(e_actions_t command, ds_actions_t action, queue_t *unq_
         free(stream);
     }
 
-    ESP_LOGI(SEND_TAG, "returning from add_to_queue");
     return add_succ;
 
 }
@@ -102,8 +94,6 @@ bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
         ESP_LOGE(SEND_TAG, "failed to add to queue after %d attempts", attempts);
         free(stream);
     }
-
-    ESP_LOGI(SEND_TAG, "returning from add_to_queue");
     return add_succ;
 
 }

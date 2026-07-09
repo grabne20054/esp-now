@@ -93,11 +93,6 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     // current time
     time_t current_time = time(NULL);
 
-    ESP_LOGI(TAG, "sizeof(data_stream_t) = %u", sizeof(data_stream_t));
-    ESP_LOGI(TAG, "sizeof(time_t) = %u", sizeof(time_t));
-    ESP_LOGI(TAG, "sizeof(e_actions_t) = %u", sizeof(e_actions_t));
-    ESP_LOGI(TAG, "crc = %u", response_crc);
-
     #if SWITCH == 0
     if (data_payload->action == HOPPING)
     {

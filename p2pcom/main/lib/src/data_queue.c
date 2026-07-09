@@ -145,9 +145,7 @@ void do_queue(void *pvParameters)
             ESP_LOGI(QUEUE_TAG, "Processing command: %d", stream.command);
 
             if (stream.action == RESPONSE)
-            {
-                ESP_LOGI(QUEUE_TAG, "Processing response for seq: %d", stream.seq);
-                
+            {   
                 waiting_for_recv = false;
                 ESP_ERROR_CHECK(transmit(stream));
             }

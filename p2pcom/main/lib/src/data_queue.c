@@ -2,7 +2,6 @@
 #define QUEUE_C
 
 #include "../include/data_queue.h"
-#include "../include/send.h"
 #include <stdio.h>
 
 queue_t * create(int max_size)
@@ -153,7 +152,10 @@ void do_queue(void *pvParameters)
             #if SWITCH == 0
             if (stream.action == REQUEST)
             {
-                ESP_ERROR_CHECK(transmit(stream));
+                esp_err_t res_req = transmit(stream);
+
+                ESP_LOGI(QUEUE_TAG, "transmit result: %s", esp_err_to_name(res_req));
+                
             }
             #endif
 

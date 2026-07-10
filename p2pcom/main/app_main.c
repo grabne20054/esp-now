@@ -43,10 +43,16 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "gramesch"
-#define PASS "gramesch!?"
+#define SSID "Grabner_2.4GHz_Buero"
+#define PASS "erDWue8crs"
 
 static const char *TAG = "app_main";
+
+#if SWITCH == 0
+bool hopping_recv = false;
+
+uint32_t max_send = 1;
+#endif
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
@@ -67,10 +73,12 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
         }
     #endif
 
-    if (status == ESP_OK) {
+    if (status == ESP_NOW_SEND_SUCCESS) {
         ESP_LOGI(TAG, "Data sent successfully");
+        send_counter++;
     } else {
         ESP_LOGE(TAG, "Data send failed with status: %d", status);
+        failed_send_counter++;
     }
 }
 
@@ -94,15 +102,22 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
     time_t current_time = time(NULL);
 
     #if SWITCH == 0
+    if (data_payload->action != HOPPING)
+    {
+        recv_counter++;
+    }
+    
     if (data_payload->action == HOPPING)
     {
         ESP_LOGI(TAG, "Received HOPPING command, performing channel hopping");
+        hopping_recv = true;
         free(data_payload);
         return;
     }
     else if (data_payload->action == REQUEST)
     {
        ESP_LOGE(TAG, "Received REQUEST PROBABLY TRASH NOT IMPLEMENTED YET");
+       recv_wrong_action++;
        free(data_payload);
        return;
     }
@@ -158,6 +173,7 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
         else
         {
             ESP_LOGE(TAG, "CRC INVALID");
+            recv_wrong_crc++;
             free(data_payload);
             return;
         }
@@ -319,6 +335,60 @@ void app_main()
         NULL,
         1
     );
+
+    while (!hopping_recv)
+    {
+        ESP_LOGI(TAG, "Waiting for HOPPING command from peer...");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    
+
+    // test section
+    for (size_t i = 0; i < max_send; i++)
+    {
+
+        data_stream_t *test = prepare_data_stream(OPEN, REQUEST);
+
+        bool added = add_data_stream_to_queue(test, get_unq_queue());
+
+        if (added)
+        {
+            add_queue_counter++;
+        }
+        else {
+            failed_queue_counter++;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(3000));
+        
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(30000));
+    
+    ESP_LOGI(TAG, "Statistics:");
+    ESP_LOGI(TAG, "Total data streams added to queue: %d", add_queue_counter);
+    ESP_LOGI(TAG, "Total failed attempts to add data streams to queue: %d", failed_queue_counter);
+    ESP_LOGI(TAG, "Total data streams sent: %d", send_counter);
+    ESP_LOGI(TAG, "Total failed attempts to send data streams: %d", failed_send_counter);
+    ESP_LOGI(TAG, "Total data streams received: %d", recv_counter);
+    ESP_LOGI(TAG, "Total received data streams with wrong CRC: %d", recv_wrong_crc);
+    ESP_LOGI(TAG, "Total received data streams with wrong action: %d", recv_wrong_action);
+
+    // percentage calculations
+    float failed_send_percentage = (float)failed_send_counter / (send_counter + failed_send_counter) * 100.0f;
+    float failed_queue_percentage = (float)failed_queue_counter / (add_queue_counter + failed_queue_counter) * 100.0f;
+
+    ESP_LOGI(TAG, "Percentage of failed send attempts: %.2f%% (%d/%d)", failed_send_percentage, failed_send_counter, send_counter + failed_send_counter);
+    ESP_LOGI(TAG, "Percentage of failed queue attempts: %.2f%% (%d/%d)", failed_queue_percentage, failed_queue_counter, add_queue_counter + failed_queue_counter);
+
+    float failed_recv_percentage = (float)recv_wrong_crc / (recv_counter) * 100.0f;
+    ESP_LOGI(TAG, "Percentage of failed receive attempts (wrong CRC): %.2f%%", failed_recv_percentage);
+
+    float failed_recv_action_percentage = (float)recv_wrong_action / (recv_counter) * 100.0f;
+    ESP_LOGI(TAG, "Percentage of failed receive attempts (wrong action): %.2f%%", failed_recv_action_percentage);
+
+    float send_recv_mismatch_percentage = (float)recv_counter / (send_counter) * 100.0f;
+    ESP_LOGI(TAG, "Percentage of send/receive mismatch: %.2f%% (%d/%d)", send_recv_mismatch_percentage, send_counter, recv_counter);
 
     #endif
 

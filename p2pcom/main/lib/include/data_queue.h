@@ -11,11 +11,13 @@ Header File for Queuing Transmit Request
 #include "esp_mac.h"
 
 #include "../include/engine.h"
+#include "../include/send.h"
+#include "../include/helpers.h"
 
 #include "freertos/FreeRTOS.h"
 
 
-#define MAX_QUEUE_SIZE 7
+#define MAX_QUEUE_SIZE 50
 static const char *QUEUE_TAG = "queue";
 
 queue_t * create(int max_size);

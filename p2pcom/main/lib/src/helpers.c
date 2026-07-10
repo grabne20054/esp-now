@@ -12,6 +12,19 @@ static const char *TAG_HELPERS = "helpers";
 volatile uint32_t global_seq;
 volatile bool waiting_for_recv;
 
+// testing section
+volatile uint32_t add_queue_counter;
+volatile uint32_t failed_queue_counter;
+
+volatile uint32_t send_counter;
+volatile uint32_t failed_send_counter;
+
+volatile uint32_t recv_counter;
+
+volatile uint32_t recv_wrong_crc;
+volatile uint32_t recv_wrong_action;
+volatile uint32_t recv_not_waiting;
+
 #if SWITCH == 1
 EventGroupHandle_t channel_hopping = NULL;
 #endif

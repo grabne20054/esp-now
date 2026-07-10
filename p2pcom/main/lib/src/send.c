@@ -110,8 +110,7 @@ esp_err_t transmit(data_stream_t stream)
     {
         waiting_for_recv = false;
     }
-
-    return res;
+        return res;
 }
 
 

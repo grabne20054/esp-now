@@ -14,8 +14,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define RPWM_GPIO 18
-#define LPWM_GPIO 19
+#define RPWM_GPIO 4
+#define LPWM_GPIO 5
 
 #define R_EN_GPIO 25
 #define L_EN_GPIO 26

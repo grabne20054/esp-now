@@ -51,7 +51,7 @@ static const char *TAG = "app_main";
 #if SWITCH == 0
 bool hopping_recv = false;
 
-uint32_t max_send = 1;
+uint32_t max_send = 50;
 #endif
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)

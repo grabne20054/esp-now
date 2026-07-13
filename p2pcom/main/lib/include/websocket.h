@@ -6,14 +6,15 @@
 #include <esp_log.h>
 
 #include <esp_http_server.h>
+#include <esp_system.h>
 
 #include "send.h"
 static const char *WEBSOCKETTAG = "ws_socket";
 
 
-esp_err_t echo_handler(httpd_req_t *req);
+static esp_err_t echo_handler(httpd_req_t *req);
 
-static void send_response(httpd_req_t *req, char *resp);
+static esp_err_t send_response(httpd_req_t *req, char *resp);
 
 httpd_handle_t start_websocket(void);
 

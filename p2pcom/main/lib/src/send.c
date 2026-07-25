@@ -40,28 +40,7 @@ bool add_action_to_queue(e_actions_t command, ds_actions_t action, queue_t *unq_
 
     ESP_LOGI(SEND_TAG, "initial add_succ: %d", add_succ);
 
-    const int max_attempts = 5;
-    int attempts = 0;
-
-    while (!add_succ && attempts < max_attempts)
-    {
-       vTaskDelay(pdMS_TO_TICKS(1000));
-       attempts++;
-
-       ESP_LOGI(SEND_TAG, "trying add queue (attempt %d)", attempts);
-
-       add_succ = enqueue(unq_queue, stream);
-
-       ESP_LOGI(SEND_TAG, "add_succ: %d", add_succ );
-    }
-
-    if (!add_succ) {
-        ESP_LOGE(SEND_TAG, "failed to add to queue after %d attempts", attempts);
-        free(stream);
-    }
-
     return add_succ;
-
 }
 
 bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
@@ -75,25 +54,6 @@ bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
 
     ESP_LOGI(SEND_TAG, "initial add_succ: %d", add_succ);
 
-    const int max_attempts = 5;
-    int attempts = 0;
-
-    while (!add_succ && attempts < max_attempts)
-    {
-       vTaskDelay(pdMS_TO_TICKS(1000));
-       attempts++;
-
-       ESP_LOGI(SEND_TAG, "trying add queue (attempt %d)", attempts);
-
-       add_succ = enqueue(unq_queue, stream);
-
-       ESP_LOGI(SEND_TAG, "add_succ: %d", add_succ );
-    }
-
-    if (!add_succ) {
-        ESP_LOGE(SEND_TAG, "failed to add to queue after %d attempts", attempts);
-        free(stream);
-    }
     return add_succ;
 
 }

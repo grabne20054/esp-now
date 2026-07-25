@@ -11,6 +11,7 @@ static const char *TAG_HELPERS = "helpers";
 // global var for communication
 volatile uint32_t global_seq;
 volatile bool waiting_for_recv;
+volatile bool data_received;
 
 #if SWITCH == 1
 EventGroupHandle_t channel_hopping = NULL;
@@ -50,6 +51,14 @@ uint32_t get_max_clock_value(uint32_t current_value, uint32_t new_value)
     {
         return current_value;
     }
+}
+
+char * data_str_repr(data_stream_t * data)
+{
+    char * repr = malloc(256);
+    snprintf(repr, 256, "Data Stream: {command: %d, action: %d, seq: %ld, sent: %ld, ttl: %ld, crc: %lu}", 
+             data->command, data->action, data->seq, data->sent, data->ttl, data->crc);
+    return repr;
 }
 
 #endif

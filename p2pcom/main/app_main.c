@@ -43,8 +43,8 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "gramesch"
-#define PASS "gramesch!?"
+#define SSID "Grabner_2.4GHz_Buero"
+#define PASS "erDWue8crs"
 
 static const char *TAG = "app_main";
 
@@ -112,7 +112,6 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
         waiting_for_recv = false;
 
     }
-    
     #endif
 
     #if SWITCH == 1
@@ -136,10 +135,7 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
             if (data_payload->action == RESPONSE)
             {
                 ESP_LOGI(TAG, "Received RESPONSE, writing to websocket");
-                // write to websocket
-
-                free(data_payload);
-                return;
+                data_received = true;
             }
 
             queue_t * unq_queue = get_unq_queue();
@@ -151,7 +147,20 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
             }
             else
             {
-                ESP_LOGE(TAG, "Failed to add data to queue");
+                ESP_LOGE(TAG, "Failed to add data to queue; try again later.");
+
+                vTaskDelay(pdMS_TO_TICKS(10000)); // wait for 1 second before retrying
+
+                recvadd = add_data_stream_to_queue(data_payload, unq_queue);
+                if (recvadd)
+                {
+                    ESP_LOGW(TAG, "Data added to queue successfully on retry");
+
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "Failed to add data to queue on retry; dropping data.");
+                }
             }
             free(data_payload);
         }
@@ -283,11 +292,23 @@ void app_main()
         0
     );
 
+    TaskHandle_t info_handle = NULL;
+    
+    BaseType_t info_task_handle = xTaskCreatePinnedToCore(
+        print_info,
+        "info_task",
+        4096,
+        NULL,
+        1,
+        &info_handle,
+        1
+    );
+
     #if SWITCH == 1
 
     TaskHandle_t engine_handle = NULL;
 
-    BaseType_t engine_task_handle = xTaskCreatePinnedToCore(
+    /*BaseType_t engine_task_handle = xTaskCreatePinnedToCore(
         check_engine,
         "engine_task",
         4096,
@@ -295,7 +316,7 @@ void app_main()
         1,
         &engine_handle,
         1
-    );
+    );*/
 
     if (queue_task_handle == pdPASS)
     {

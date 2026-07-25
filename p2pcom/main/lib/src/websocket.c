@@ -3,11 +3,10 @@
 
 #include "../include/websocket.h"
 
-static httpd_handle_t ws_server = NULL;
-static int ws_client_fd = -1;
+httpd_handle_t ws_server = NULL;
+int ws_client_fd = -1;
 
-
-static esp_err_t send_ws_message(httpd_req_t *req, const char *msg)
+esp_err_t send_ws_message(httpd_req_t *req, const char *msg)
 {
     httpd_ws_frame_t ws_pkt = {
         .type = HTTPD_WS_TYPE_TEXT,
@@ -19,9 +18,9 @@ static esp_err_t send_ws_message(httpd_req_t *req, const char *msg)
 }
 
 
-static esp_err_t send_ws_message_async(const char *msg)
+esp_err_t send_ws_message_async(const char *msg, httpd_handle_t server, int client_fd)
 {
-    if (ws_server == NULL || ws_client_fd < 0) {
+    if (server == NULL || client_fd < 0) {
         return ESP_FAIL;
     }
 
@@ -32,8 +31,8 @@ static esp_err_t send_ws_message_async(const char *msg)
     };
 
     return httpd_ws_send_frame_async(
-        ws_server,
-        ws_client_fd,
+        server,
+        client_fd,
         &ws_pkt
     );
 }
@@ -41,7 +40,7 @@ static esp_err_t send_ws_message_async(const char *msg)
 
 static esp_err_t echo_handler(httpd_req_t *req)
 {
-    ESP_LOGI(WEBSOCKETTAG, "WebSocket request: %s", req->uri);
+    ESP_LOGI(WEBSOCKETTAG, "WebSocket request: %s, method: %d", req->uri, req->method);
     if (req->method == HTTP_GET) {
 
         ESP_LOGI(WEBSOCKETTAG, "WebSocket handshake complete");
@@ -203,6 +202,18 @@ void ws_task(void *pvParameters)
     }
 
     vTaskDelete(NULL);
+}
+
+httpd_handle_t get_ws_server(void)
+{
+    ESP_LOGI(WEBSOCKETTAG, "Returning ws_server: %p", ws_server);
+    return ws_server;
+}
+
+int get_ws_client_fd(void)
+{
+    ESP_LOGI(WEBSOCKETTAG, "Returning ws_client_fd: %d", ws_client_fd);
+    return ws_client_fd;
 }
 
 #endif

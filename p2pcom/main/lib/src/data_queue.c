@@ -3,6 +3,7 @@
 
 #include "../include/data_queue.h"
 #include "../include/send.h"
+#include "../include/websocket.h"
 #include <stdio.h>
 
 queue_t * create(int max_size)
@@ -33,6 +34,8 @@ queue_t * create(int max_size)
 
 bool enqueue(queue_t *instance, data_stream_t * data_stream)
 {
+    
+    ESP_LOGI(QUEUE_TAG, "mutex locked for enqueue");
     pthread_mutex_lock(&instance->mutex);
 
     if (instance == NULL || data_stream == NULL)
@@ -57,6 +60,7 @@ bool enqueue(queue_t *instance, data_stream_t * data_stream)
         success = false;
     }
 
+    ESP_LOGI(QUEUE_TAG, "mutex unlocked for enqueue");
     pthread_mutex_unlock(&instance->mutex);
 
     return success;
@@ -64,11 +68,19 @@ bool enqueue(queue_t *instance, data_stream_t * data_stream)
 
 bool is_empty(queue_t * instance)
 {
-    return (instance->current_size == 0);
+    ESP_LOGI(QUEUE_TAG, "mutex locked for is_empty");
+    pthread_mutex_lock(&instance->mutex);
+    ESP_LOGW(QUEUE_TAG, "current size: %d", instance->current_size);
+    bool empty = (instance->current_size == 0);
+    pthread_mutex_unlock(&instance->mutex);
+    ESP_LOGI(QUEUE_TAG, "mutex unlocked for is_empty");
+    return empty;
 }
 
 data_stream_t dequeue(queue_t * instance)
 {
+
+    ESP_LOGI(QUEUE_TAG, "mutex locked for dequeue");
     pthread_mutex_lock(&instance->mutex);
 
     data_stream_t data_stream = instance->data_stream_array[instance->front];
@@ -76,7 +88,9 @@ data_stream_t dequeue(queue_t * instance)
     instance->front = (instance->front + 1) % instance->max_size;
     instance->current_size--;
 
+    ESP_LOGI(QUEUE_TAG, "mutex unlocked for dequeue");
     pthread_mutex_unlock(&instance->mutex);
+
 
     return data_stream;
 }
@@ -139,16 +153,10 @@ void do_queue(void *pvParameters)
     {
         if (!is_empty(queue))
         {
-
+            ESP_LOGI(QUEUE_TAG, "Queue is not empty, processing data stream res: %d", queue->current_size);
             data_stream_t stream = dequeue(queue);
 
             ESP_LOGI(QUEUE_TAG, "Processing command: %d", stream.command);
-
-            if (stream.action == RESPONSE)
-            {   
-                waiting_for_recv = false;
-                ESP_ERROR_CHECK(transmit(stream));
-            }
             
             #if SWITCH == 0
             if (stream.action == REQUEST)
@@ -167,16 +175,30 @@ void do_queue(void *pvParameters)
                     perform_engine_action(engine, stream.command);
 
                 }
+
+                if (stream.action == RESPONSE)
+                {   
+                    waiting_for_recv = false;
+                    ESP_ERROR_CHECK(transmit(stream));
+                }
             #endif
+
             
         }
-        else
-        {
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            ESP_LOGI(QUEUE_TAG, "current queue size: %d", queue->current_size);
-            ESP_LOGI(QUEUE_TAG, "global seq: %d", global_seq);
-            continue;
-        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+void print_info(void *pvParameters)
+{
+    queue_t * queue = get_unq_queue();
+
+    while (1)
+    {
+        ESP_LOGI(QUEUE_TAG, "current queue size: %d", queue->current_size);
+        ESP_LOGI(QUEUE_TAG, "global seq: %d", global_seq);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 

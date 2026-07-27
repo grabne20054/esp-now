@@ -307,6 +307,7 @@ void app_main()
     #endif
 
     #if SWITCH == 1
+        pwm_init();
         // perform channel hopping if on field side
         if (!hopping_channel())
         {

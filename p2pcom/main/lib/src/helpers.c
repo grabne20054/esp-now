@@ -35,8 +35,6 @@ uint32_t crc32(const void *data, size_t length)
         }
     }
 
-    ESP_LOGI(TAG_HELPERS, "CRC calculated" );
-
     return ~crc;
 }
 

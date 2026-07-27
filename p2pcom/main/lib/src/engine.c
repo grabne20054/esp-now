@@ -125,7 +125,6 @@ e_status_t perform_engine_action(engine_t *engine, e_actions_t action)
 {
 
     pthread_mutex_lock(&engine->mutex);
-    ESP_LOGI(TAG_ENGINE, "mutex locked");
     engine->status = BUSY;
 
     switch (action)
@@ -141,13 +140,7 @@ e_status_t perform_engine_action(engine_t *engine, e_actions_t action)
             return ERROR;
     }
 
-    // assuming action has been performed 
-    vTaskDelay(pdMS_TO_TICKS(2000)); // simulate time taken to perform action
-    ESP_LOGI(TAG_ENGINE, "Action %d performed successfully", action);
-
-
     pthread_mutex_unlock(&engine->mutex);
-    ESP_LOGI(TAG_ENGINE, "mutex unlocked");
     engine->status = READY;
 
     data_stream_t *stream = prepare_data_stream(action, RESPONSE);

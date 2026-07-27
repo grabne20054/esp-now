@@ -187,8 +187,6 @@ esp_err_t stop_websocket(httpd_handle_t server)
     return httpd_stop(server);
 }
 
-
-
 void ws_task(void *pvParameters)
 {
     httpd_handle_t server = start_websocket();

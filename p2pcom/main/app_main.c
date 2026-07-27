@@ -292,43 +292,6 @@ void app_main()
         0
     );
 
-    TaskHandle_t info_handle = NULL;
-    
-    BaseType_t info_task_handle = xTaskCreatePinnedToCore(
-        print_info,
-        "info_task",
-        4096,
-        NULL,
-        1,
-        &info_handle,
-        1
-    );
-
-    #if SWITCH == 1
-
-    TaskHandle_t engine_handle = NULL;
-
-    /*BaseType_t engine_task_handle = xTaskCreatePinnedToCore(
-        check_engine,
-        "engine_task",
-        4096,
-        NULL,
-        1,
-        &engine_handle,
-        1
-    );*/
-
-    if (queue_task_handle == pdPASS)
-    {
-        ESP_LOGI(TAG, "TASK QUEUE SPAWNED SUCCESSFULLY");
-    }
-    else
-    {
-        return;
-    }
-
-    #endif
-
     #if SWITCH == 0
 
     BaseType_t websocket_task_handle = xTaskCreatePinnedToCore(

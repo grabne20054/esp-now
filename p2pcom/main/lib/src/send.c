@@ -38,8 +38,6 @@ bool add_action_to_queue(e_actions_t command, ds_actions_t action, queue_t *unq_
 
     bool add_succ = enqueue(unq_queue, stream);
 
-    ESP_LOGI(SEND_TAG, "initial add_succ: %d", add_succ);
-
     return add_succ;
 }
 
@@ -52,8 +50,6 @@ bool add_data_stream_to_queue(data_stream_t * stream, queue_t *unq_queue)
 
     bool add_succ = enqueue(unq_queue, stream);
 
-    ESP_LOGI(SEND_TAG, "initial add_succ: %d", add_succ);
-
     return add_succ;
 
 }
@@ -62,7 +58,6 @@ esp_err_t transmit(data_stream_t stream)
 {
     uint32_t crc = crc32(&stream, (sizeof(stream)));
     stream.crc = crc;
-    ESP_LOGI(SEND_TAG, "Peer added successfully: [" MACSTR "]", MAC2STR(stream.dest));
 
     esp_err_t res = esp_now_send(stream.dest, (uint8_t*)&stream, sizeof(stream));
     

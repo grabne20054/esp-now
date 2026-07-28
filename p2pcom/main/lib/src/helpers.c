@@ -59,4 +59,21 @@ char * data_str_repr(data_stream_t * data)
     return repr;
 }
 
+char * command_str_repr(e_actions_t command)
+{
+    switch (command)
+    {
+        case OPEN:
+            return "OPEN";
+        case CLOSE:
+            return "CLOSE";
+        case GETSTATUS:
+            return "GETSTATUS";
+        case GETPOSITION:
+            return "GETPOSITION";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 #endif

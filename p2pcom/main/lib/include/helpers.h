@@ -16,4 +16,6 @@ uint32_t get_max_clock_value(uint32_t current_value, uint32_t new_value);
 
 char * data_str_repr(data_stream_t * data);
 
+char * command_str_repr(e_actions_t command);
+
 #endif

@@ -67,6 +67,29 @@ void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t sta
         }
     #endif
 
+    #if SWITCH == 0
+
+    int fd = get_ws_client_fd();
+    httpd_handle_t server = get_ws_server();
+    
+    if (server != NULL && fd >= 0)
+    {
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Send Command with status: %s", esp_err_to_name(status));
+
+        esp_err_t err = send_ws_message_async(msg, server, fd);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to send message to WebSocket client: %s", esp_err_to_name(err));
+        }
+
+    }
+    else
+    {
+        ESP_LOGE(TAG, "WebSocket server or client fd is invalid");
+    }
+    #endif
+
     if (status == ESP_OK) {
         ESP_LOGI(TAG, "Data sent successfully");
     } else {
@@ -134,9 +157,34 @@ void app_recv_cb_handle(const esp_now_recv_info_t *rx_info, const uint8_t *data,
 
             if (data_payload->action == RESPONSE)
             {
+                #if SWITCH == 0
                 ESP_LOGI(TAG, "Received RESPONSE, writing to websocket");
+
+                int fd = get_ws_client_fd();
+                httpd_handle_t server = get_ws_server();
+
+                if (server != NULL && fd >= 0)
+                {
+                    char msg[256];
+                    snprintf(msg, sizeof(msg), "Received Acknowledgement from engine peer with command: %s", command_str_repr(data_payload->command));
+
+                    esp_err_t err = send_ws_message_async(msg, server, fd);
+                    if (err != ESP_OK)
+                    {
+                        ESP_LOGE(TAG, "Failed to send message to WebSocket client: %s", esp_err_to_name(err));
+                    }
+
+                    close_ws_connection(server, fd);
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "WebSocket server or client fd is invalid");
+                }
+                #endif
+
                 data_received = true;
             }
+
 
             queue_t * unq_queue = get_unq_queue();
 

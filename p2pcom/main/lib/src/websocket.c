@@ -3,9 +3,6 @@
 
 #include "../include/websocket.h"
 
-httpd_handle_t ws_server = NULL;
-int ws_client_fd = -1;
-
 esp_err_t send_ws_message(httpd_req_t *req, const char *msg)
 {
     httpd_ws_frame_t ws_pkt = {
@@ -41,13 +38,9 @@ esp_err_t send_ws_message_async(const char *msg, httpd_handle_t server, int clie
 static esp_err_t echo_handler(httpd_req_t *req)
 {
     ESP_LOGI(WEBSOCKETTAG, "WebSocket request: %s, method: %d", req->uri, req->method);
-    if (req->method == HTTP_GET) {
-
-        ESP_LOGI(WEBSOCKETTAG, "WebSocket handshake complete");
-
+    if (req->method == 0) { // HTTP_GET
+        
         ws_client_fd = httpd_req_to_sockfd(req);
-
-        return ESP_OK;
     }
 
     httpd_ws_frame_t ws_pkt;
@@ -204,14 +197,27 @@ void ws_task(void *pvParameters)
 
 httpd_handle_t get_ws_server(void)
 {
-    ESP_LOGI(WEBSOCKETTAG, "Returning ws_server: %p", ws_server);
     return ws_server;
 }
 
 int get_ws_client_fd(void)
 {
-    ESP_LOGI(WEBSOCKETTAG, "Returning ws_client_fd: %d", ws_client_fd);
     return ws_client_fd;
+}
+
+void close_ws_connection(httpd_handle_t server, int client_fd)
+{
+    if (server == NULL || client_fd < 0) {
+        ESP_LOGE(WEBSOCKETTAG, "Invalid server or client fd for closing connection");
+        return;
+    }
+
+    esp_err_t err = httpd_sess_trigger_close(server, client_fd);
+    if (err != ESP_OK) {
+        ESP_LOGE(WEBSOCKETTAG, "Failed to close WebSocket connection: %s", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(WEBSOCKETTAG, "WebSocket connection closed successfully");
+    }
 }
 
 #endif

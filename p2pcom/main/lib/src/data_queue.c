@@ -144,7 +144,7 @@ void do_queue(void *pvParameters)
             data_stream_t stream = dequeue(queue);
             
             #if SWITCH == 0
-            if (stream.action == REQUEST)
+            if (stream.action == REQUEST || stream.action == HOPPING)
             {
                 ESP_ERROR_CHECK(transmit(stream));
             }

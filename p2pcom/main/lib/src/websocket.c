@@ -167,6 +167,8 @@ httpd_handle_t start_websocket(void)
         return NULL;
     }
 
+    ESP_LOGI(WEBSOCKETTAG, "Registering URI handlers, WebSocket ready");
+
     httpd_register_uri_handler(ws_server, &ws);
 
     return ws_server;

@@ -43,10 +43,9 @@
 #define UART_TX_IO     UART_PIN_NO_CHANGE
 #define UART_RX_IO     UART_PIN_NO_CHANGE
 
-#define SSID "Grabner_2.4GHz_Buero"
-#define PASS "erDWue8crs"
 
 static const char *TAG = "app_main";
+
 
 void app_send_cb_handle(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
@@ -263,26 +262,6 @@ void app_main()
     
     ESP_ERROR_CHECK( esp_now_init());
 
-    // setup tcpip stack if on ws side
-    #if SWITCH == 0
-    
-
-        wifi_config_t cfg = {
-        .sta = {
-            .ssid = SSID,
-            .password = PASS,
-
-        }
-        };
-        bool restcip = set_up_tcpip_stack(cfg);
-        if (!restcip)
-        {
-            ESP_LOGE(TAG, "Failed to set up TCP/IP stack");
-            return;
-        }
-    
-    #endif
-
     uint8_t primary;
     wifi_second_chan_t second;
     esp_wifi_get_channel(&primary, &second);
@@ -337,14 +316,16 @@ void app_main()
         NULL,
         1,
         &queue_handle,
-        0
-    );
+            0
+        );
 
     #if SWITCH == 0
 
-    BaseType_t websocket_task_handle = xTaskCreatePinnedToCore(
-        ws_task,
-        "websocket_task",
+    tcp_ip_event_group = xEventGroupCreate();
+
+    BaseType_t tcpip_task_handle = xTaskCreatePinnedToCore(
+        tcpip_setup_task,
+        "tcpip_task",
         4096,
         NULL,
         1,
@@ -352,16 +333,30 @@ void app_main()
         1
     );
 
+    if (xEventGroupWaitBits(tcp_ip_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY))
+    {
+        BaseType_t websocket_task_handle = xTaskCreatePinnedToCore(
+            ws_task,
+            "websocket_task",
+            4096,
+            NULL,
+            1,
+            NULL,
+            1
+        );
+    }
+    
+    
     #endif
 
     #if SWITCH == 1
         pwm_init();
         // perform channel hopping if on field side
-        if (!hopping_channel())
+        /*if (!hopping_channel())
         {
             ESP_LOGI(TAG, "Failed to find peer during channel hopping, continuing with last known good channel");
             return;
-        }
+        }*/
     
     #endif
 }

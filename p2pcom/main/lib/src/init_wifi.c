@@ -5,16 +5,13 @@
 
 #include "../include/init_wifi.h"
 
-/* The event group allows multiple bits for each event, but we only care about two events:
- * - we are connected to the AP with an IP
- * - we failed to connect after the maximum amount of retries */
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
-
 static const char *TAG_WIFI = "init_wifi";
 
 static int s_retry_num = 0;
+
+#if SWITCH == 0
+EventGroupHandle_t tcp_ip_event_group = NULL;
+#endif
 
 #if SWITCH == 1
 uint8_t last_good_channel = 1; // default to channel 1
@@ -135,6 +132,34 @@ static void set_channel(uint8_t channel)
     ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
     ESP_LOGI(TAG_WIFI, "WiFi channel set to %d", channel);
 }
+
+#if SWITCH == 0
+void tcpip_setup_task(void *pvParameters)
+{
+    if (tcp_ip_event_group == NULL)
+    {
+        ESP_LOGE(TAG_WIFI, "Failed to create TCP/IP event group");
+        vTaskDelete(NULL);
+    }
+
+    wifi_config_t cfg = {
+        .sta = {
+            .ssid = SSID,
+            .password = PASS,
+        }
+    };
+
+    bool success = set_up_tcpip_stack(cfg);
+    xEventGroupSetBits(tcp_ip_event_group, success ? WIFI_CONNECTED_BIT : WIFI_FAIL_BIT);
+    if (!success)
+    {
+        ESP_LOGE(TAG_WIFI, "Failed to set up TCP/IP stack");
+        vTaskDelete(NULL);
+    }
+
+    vTaskDelete(NULL);
+}
+#endif
 
 #if SWITCH == 1
 bool hopping_channel()

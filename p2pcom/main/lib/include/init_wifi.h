@@ -17,8 +17,17 @@
 #include "globals.h"
 #include "send.h"
 
+#define SSID "gramesch"
+#define PASS "gramesch!?"
 
 static esp_now_peer_info_t peer = {0};
+
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+
+#if SWITCH == 0
+extern EventGroupHandle_t tcp_ip_event_group;
+#endif
 
 #if SWITCH == 1
 extern uint8_t last_good_channel;
@@ -37,6 +46,10 @@ esp_err_t get_mac(uint8_t mac[6]);
 bool set_up_tcpip_stack(wifi_config_t conf);
 
 static void set_channel(uint8_t channel);
+
+#if SWITCH == 0
+void tcpip_setup_task(void *pvParameters);
+#endif
 
 #if SWITCH == 1
 bool hopping_channel(void);

@@ -310,12 +310,12 @@ void app_main()
     TaskHandle_t queue_handle = NULL;
 
     BaseType_t queue_task_handle = xTaskCreatePinnedToCore(
-        do_queue,
-        "queue_task",
-        4096,
-        NULL,
-        1,
-        &queue_handle,
+            do_queue,
+            "queue_task",
+            4096,
+            NULL,
+            1,
+            &queue_handle,
             0
         );
 
@@ -352,11 +352,11 @@ void app_main()
     #if SWITCH == 1
         pwm_init();
         // perform channel hopping if on field side
-        /*if (!hopping_channel())
+        if (!hopping_channel())
         {
             ESP_LOGI(TAG, "Failed to find peer during channel hopping, continuing with last known good channel");
             return;
-        }*/
+        }
     
     #endif
 }
